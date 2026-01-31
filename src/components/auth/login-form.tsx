@@ -6,6 +6,7 @@
 
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
+import Link from "next/link";
 import { login } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -96,6 +98,14 @@ export const LoginForm = () => {
           <SubmitButton />
         </form>
       </CardContent>
+      <CardFooter className="flex justify-center">
+        <p className="text-sm text-muted-foreground">
+          アカウントをお持ちでない方は{" "}
+          <Link href="/signup" className="text-primary hover:underline">
+            新規登録
+          </Link>
+        </p>
+      </CardFooter>
     </Card>
   );
 };
