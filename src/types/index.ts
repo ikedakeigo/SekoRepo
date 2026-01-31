@@ -1,66 +1,120 @@
-// ユーザー
-export type UserRole = 'staff' | 'admin';
+/**
+ * 型定義ファイル
+ * アプリケーション全体で使用する型を定義
+ */
 
+// ============================================
+// ユーザー関連
+// ============================================
+
+/** ユーザーロール */
+export type UserRole = "staff" | "admin";
+
+/** ユーザー */
 export interface User {
   id: string;
   email: string;
   name: string;
   role: UserRole;
-  avatar_url?: string;
-  created_at: string;
-  updated_at: string;
+  avatarUrl?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-// 案件
-export type ProjectStatus = 'active' | 'completed' | 'posted';
+// ============================================
+// 案件関連
+// ============================================
 
+/** 案件ステータス */
+export type ProjectStatus = "active" | "completed" | "posted";
+
+/** 案件 */
 export interface Project {
   id: string;
   name: string;
-  location?: string;
-  description?: string;
+  location?: string | null;
+  description?: string | null;
   status: ProjectStatus;
-  start_date?: string;
-  end_date?: string;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
+  startDate?: Date | null;
+  endDate?: Date | null;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-// 写真
-export type PhotoType = 'before' | 'during' | 'after' | 'other';
+/** 案件（統計情報付き） */
+export interface ProjectWithStats extends Project {
+  photoCount: number;
+  reportCount: number;
+}
 
+// ============================================
+// 写真関連
+// ============================================
+
+/** 写真の種類 */
+export type PhotoType = "before" | "during" | "after" | "other";
+
+/** 写真種類のラベル */
 export const PHOTO_TYPE_LABELS: Record<PhotoType, string> = {
-  before: 'ビフォー',
-  during: '作業中',
-  after: 'アフター',
-  other: 'その他',
+  before: "ビフォー",
+  during: "作業中",
+  after: "アフター",
+  other: "その他",
 };
 
+/** 写真 */
 export interface Photo {
   id: string;
-  report_id: string;
-  photo_url: string;
-  photo_type: PhotoType;
+  reportId: string;
+  photoUrl: string;
+  photoType: PhotoType;
   title: string;
-  comment?: string;
-  customer_feedback?: string;
-  sort_order: number;
-  taken_at?: string;
-  created_at: string;
-  updated_at: string;
+  comment?: string | null;
+  customerFeedback?: string | null;
+  sortOrder: number;
+  takenAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-// レポート
+/** 写真（ユーザー情報付き） */
+export interface PhotoWithUser extends Photo {
+  user: User;
+  reportCreatedAt: Date;
+}
+
+// ============================================
+// レポート関連
+// ============================================
+
+/** レポート */
 export interface Report {
   id: string;
-  project_id: string;
-  user_id: string;
-  created_at: string;
-  updated_at: string;
+  projectId: string;
+  userId: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-// フォーム用
+/** レポート（詳細情報付き） */
+export interface ReportWithDetails extends Report {
+  photos: Photo[];
+  project: Project;
+  user: User;
+}
+
+/** レポート（写真数付き） */
+export interface ReportWithCount extends Report {
+  photoCount: number;
+  project: Pick<Project, "name">;
+}
+
+// ============================================
+// フォーム用の型
+// ============================================
+
+/** 写真フォームデータ */
 export interface PhotoFormData {
   file: File | null;
   previewUrl: string;
@@ -68,4 +122,35 @@ export interface PhotoFormData {
   title: string;
   comment: string;
   customerFeedback: string;
+}
+
+/** レポートフォームデータ */
+export interface ReportFormData {
+  projectId: string;
+  newProjectName?: string;
+  newProjectLocation?: string;
+  photos: PhotoFormData[];
+}
+
+/** 案件作成データ */
+export interface CreateProjectData {
+  name: string;
+  location?: string;
+}
+
+// ============================================
+// API レスポンス用
+// ============================================
+
+/** APIレスポンス */
+export interface ApiResponse<T> {
+  data: T | null;
+  error: string | null;
+}
+
+/** アクション結果 */
+export interface ActionResult<T = void> {
+  success: boolean;
+  data?: T;
+  error?: string;
 }

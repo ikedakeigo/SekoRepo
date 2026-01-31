@@ -1,7 +1,16 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+/**
+ * Supabase サーバークライアント
+ * Server Components、Server Actions、Route Handlers で使用
+ */
 
-export async function createClient() {
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+
+/**
+ * サーバー用Supabaseクライアントを作成
+ * @returns Supabaseクライアント
+ */
+export const createClient = async () => {
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -9,10 +18,10 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
+        getAll: () => {
           return cookieStore.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll: (cookiesToSet) => {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
@@ -24,4 +33,4 @@ export async function createClient() {
       },
     }
   );
-}
+};
