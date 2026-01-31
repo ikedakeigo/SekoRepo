@@ -1,0 +1,100 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ユーザーロール
+enum Role {
+  staff
+  admin
+}
+
+// 写真の種類
+enum PhotoType {
+  before
+  during
+  after
+  other
+}
+
+// 案件ステータス
+enum ProjectStatus {
+  active
+  completed
+  archived
+}
+
+// ユーザー
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  role      Role     @default(staff)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // リレーション
+  projects Project[]
+  reports  Report[]
+
+  @@map("users")
+}
+
+// 案件（施工現場）
+model Project {
+  id        String        @id @default(uuid())
+  name      String
+  location  String?
+  status    ProjectStatus @default(active)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  // リレーション
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdById String   @map("created_by")
+  reports     Report[]
+
+  @@map("projects")
+}
+
+// レポート（1回の送信）
+model Report {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // リレーション
+  project   Project @relation(fields: [projectId], references: [id])
+  projectId String  @map("project_id")
+  user      User    @relation(fields: [userId], references: [id])
+  userId    String  @map("user_id")
+  photos    Photo[]
+
+  @@map("reports")
+}
+
+// 写真
+model Photo {
+  id               String    @id @default(uuid())
+  photoUrl         String    @map("photo_url")
+  photoType        PhotoType @map("photo_type")
+  title            String
+  comment          String?
+  customerFeedback String?   @map("customer_feedback")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  // リレーション
+  report   Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  reportId String @map("report_id")
+
+  @@map("photos")
+}
