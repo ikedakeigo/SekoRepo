@@ -7,94 +7,87 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-// ユーザーロール
-enum Role {
-  staff
-  admin
-}
-
-// 写真の種類
-enum PhotoType {
-  before
-  during
-  after
-  other
-}
-
-// 案件ステータス
-enum ProjectStatus {
-  active
-  completed
-  archived
-}
-
-// ユーザー
+/// ユーザー
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
   name      String
-  role      Role     @default(staff)
+  role      String   @default("staff") // 'staff' | 'admin'
+  avatarUrl String?  @map("avatar_url")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // リレーション
-  projects Project[]
+  projects Project[] @relation("CreatedProjects")
   reports  Report[]
 
   @@map("users")
 }
 
-// 案件（施工現場）
+/// 案件（施工現場）
 model Project {
-  id        String        @id @default(uuid())
-  name      String
-  location  String?
-  status    ProjectStatus @default(active)
-  createdAt DateTime      @default(now()) @map("created_at")
-  updatedAt DateTime      @updatedAt @map("updated_at")
+  id          String    @id @default(uuid())
+  name        String
+  location    String?
+  description String?
+  status      String    @default("active") // 'active' | 'completed' | 'posted'
+  startDate   DateTime? @map("start_date")
+  endDate     DateTime? @map("end_date")
+  createdBy   String    @map("created_by")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   // リレーション
-  createdBy   User     @relation(fields: [createdById], references: [id])
-  createdById String   @map("created_by")
-  reports     Report[]
+  creator User     @relation("CreatedProjects", fields: [createdBy], references: [id])
+  reports Report[]
 
+  @@index([status])
+  @@index([createdBy])
   @@map("projects")
 }
 
-// レポート（1回の送信）
+/// レポート（1回の送信）
 model Report {
   id        String   @id @default(uuid())
+  projectId String   @map("project_id")
+  userId    String   @map("user_id")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // リレーション
-  project   Project @relation(fields: [projectId], references: [id])
-  projectId String  @map("project_id")
-  user      User    @relation(fields: [userId], references: [id])
-  userId    String  @map("user_id")
-  photos    Photo[]
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+  photos  Photo[]
 
+  @@index([projectId])
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
   @@map("reports")
 }
 
-// 写真
+/// 写真
 model Photo {
   id               String    @id @default(uuid())
+  reportId         String    @map("report_id")
   photoUrl         String    @map("photo_url")
-  photoType        PhotoType @map("photo_type")
+  photoType        String    @map("photo_type") // 'before' | 'during' | 'after' | 'other'
   title            String
   comment          String?
   customerFeedback String?   @map("customer_feedback")
+  sortOrder        Int       @default(0) @map("sort_order")
+  takenAt          DateTime? @map("taken_at")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
   // リレーション
-  report   Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  reportId String @map("report_id")
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
+  @@index([reportId])
+  @@index([photoType])
   @@map("photos")
 }
