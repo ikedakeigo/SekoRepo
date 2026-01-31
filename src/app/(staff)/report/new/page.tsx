@@ -1,8 +1,14 @@
-export default function NewReportPage() {
-  return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold">新規レポート</h1>
-      <p>写真とコメントを入力</p>
-    </div>
-  );
-}
+/**
+ * レポート入力画面
+ */
+
+import { getActiveProjects } from "@/actions/projects";
+import { ReportForm } from "@/components/report";
+
+const NewReportPage = async () => {
+  const projects = await getActiveProjects();
+
+  return <ReportForm projects={projects} />;
+};
+
+export default NewReportPage;
