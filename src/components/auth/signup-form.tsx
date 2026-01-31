@@ -1,5 +1,5 @@
 /**
- * ログインフォームコンポーネント
+ * 新規登録フォームコンポーネント
  */
 
 "use client";
@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
-import { login } from "@/actions/auth";
+import { signup } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,24 +32,34 @@ const SubmitButton = () => {
       {pending ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ログイン中...
+          登録中...
         </>
       ) : (
-        "ログイン"
+        "新規登録"
       )}
     </Button>
   );
 };
 
 /**
- * ログインフォーム
+ * 新規登録フォーム
  */
-export const LoginForm = () => {
+export const SignupForm = () => {
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (formData: FormData) => {
     setError(null);
-    const result = await login(formData);
+
+    // パスワード確認チェック
+    const password = formData.get("password") as string;
+    const confirmPassword = formData.get("confirmPassword") as string;
+
+    if (password !== confirmPassword) {
+      setError("パスワードが一致しません");
+      return;
+    }
+
+    const result = await signup(formData);
     if (result?.error) {
       setError(result.error);
     }
@@ -60,7 +70,7 @@ export const LoginForm = () => {
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl text-center">SekoRepo</CardTitle>
         <CardDescription className="text-center">
-          施工レポート管理システム
+          新規アカウント登録
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -70,6 +80,18 @@ export const LoginForm = () => {
               {error}
             </div>
           )}
+
+          <div className="space-y-2">
+            <Label htmlFor="name">お名前</Label>
+            <Input
+              id="name"
+              name="name"
+              type="text"
+              placeholder="山田 太郎"
+              required
+              autoComplete="name"
+            />
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="email">メールアドレス</Label>
@@ -89,9 +111,23 @@ export const LoginForm = () => {
               id="password"
               name="password"
               type="password"
-              placeholder="••••••••"
+              placeholder="6文字以上"
               required
-              autoComplete="current-password"
+              minLength={6}
+              autoComplete="new-password"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">パスワード（確認）</Label>
+            <Input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              placeholder="もう一度入力"
+              required
+              minLength={6}
+              autoComplete="new-password"
             />
           </div>
 
@@ -100,9 +136,9 @@ export const LoginForm = () => {
       </CardContent>
       <CardFooter className="flex justify-center">
         <p className="text-sm text-muted-foreground">
-          アカウントをお持ちでない方は{" "}
-          <Link href="/signup" className="text-primary hover:underline">
-            新規登録
+          既にアカウントをお持ちの方は{" "}
+          <Link href="/login" className="text-primary hover:underline">
+            ログイン
           </Link>
         </p>
       </CardFooter>

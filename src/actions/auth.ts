@@ -50,6 +50,65 @@ export const login = async (formData: FormData) => {
 };
 
 /**
+ * 新規登録
+ * @param formData - フォームデータ（email, password, name）
+ * @returns エラーメッセージ（成功時はリダイレクト）
+ */
+export const signup = async (formData: FormData) => {
+  const supabase = await createClient();
+
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
+  const name = formData.get("name") as string;
+
+  if (!email || !password || !name) {
+    return { error: "すべての項目を入力してください" };
+  }
+
+  if (password.length < 6) {
+    return { error: "パスワードは6文字以上で入力してください" };
+  }
+
+  // Supabase Authでユーザー作成
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+  });
+
+  if (error) {
+    if (error.message.includes("already registered")) {
+      return { error: "このメールアドレスは既に登録されています" };
+    }
+    return { error: "登録に失敗しました。もう一度お試しください" };
+  }
+
+  if (!data.user) {
+    return { error: "ユーザーの作成に失敗しました" };
+  }
+
+  // Prisma DBにユーザー情報を登録
+  try {
+    await prisma.user.create({
+      data: {
+        id: data.user.id,
+        email,
+        name,
+        role: "staff", // デフォルトはスタッフ
+      },
+    });
+  } catch (dbError) {
+    // DB登録失敗時はAuthユーザーを削除（ロールバック）
+    await supabase.auth.admin.deleteUser(data.user.id).catch(() => {
+      // Admin権限がない場合は無視
+    });
+    return { error: "ユーザー情報の登録に失敗しました" };
+  }
+
+  revalidatePath("/", "layout");
+  redirect("/");
+};
+
+/**
  * ログアウト
  */
 export const logout = async () => {
