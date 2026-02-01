@@ -10,6 +10,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Loader2, Send, ArrowLeft } from "lucide-react";
 import { PhotoUploader } from "./photo-uploader";
 import { PhotoDetailCard } from "./photo-detail-card";
@@ -35,10 +37,12 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
   const router = useRouter();
   const [projects, setProjects] = useState(initialProjects);
   const [projectId, setProjectId] = useState("");
+  const [summary, setSummary] = useState("");
   const [photos, setPhotos] = useState<PhotoFormData[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{
     projectId?: string;
+    summary?: string;
     photos?: string;
   }>({});
 
@@ -75,9 +79,14 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
     }
 
     // 各写真のバリデーション
-    const hasInvalidPhoto = photos.some((photo) => !photo.title.trim());
-    if (hasInvalidPhoto) {
+    const hasInvalidTitle = photos.some((photo) => !photo.title.trim());
+    if (hasInvalidTitle) {
       newErrors.photos = "すべての写真にタイトルを入力してください";
+    }
+
+    // 今日の作業について（必須）
+    if (!summary.trim()) {
+      newErrors.summary = "今日の作業についての入力は必須です";
     }
 
     setErrors(newErrors);
@@ -97,6 +106,7 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
     try {
       await createReport({
         projectId,
+        summary: summary.trim() || undefined,
         photos: photos.map((photo) => ({
           ...photo,
           photoType: photo.photoType as PhotoType,
@@ -158,13 +168,44 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
           </CardContent>
         </Card>
 
+        {/* 全体コメント */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">
+              今日の作業について <span className="text-red-500">*</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="summary" className="text-sm text-muted-foreground">
+                その日の作業内容、お客様の様子、現場での出来事など自由に記入してください
+              </Label>
+              <Textarea
+                id="summary"
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
+                placeholder="例: 今日は〇〇邸で屋根の葺き替え作業を行いました。朝は少し雨が降っていましたが、午後から晴れて作業がスムーズに進みました。お客様がお茶を差し入れてくださり、とても嬉しかったです。材料の運搬時に少し道が狭かったですが、無事に完了しました。"
+                rows={5}
+                maxLength={2000}
+                className="resize-none"
+              />
+              {errors.summary && (
+                <p className="text-sm text-red-500">{errors.summary}</p>
+              )}
+              <p className="text-xs text-muted-foreground text-right">
+                {summary.length}/2000文字
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* STEP 3: 写真の詳細 */}
         {photos.length > 0 && (
           <>
             <Separator />
             <div className="space-y-4">
               <h2 className="text-base font-semibold px-1">
-                STEP 3: 写真の詳細
+                STEP 3: 各写真の詳細
               </h2>
               {photos.map((photo, index) => (
                 <PhotoDetailCard
