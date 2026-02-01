@@ -15,13 +15,26 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronRight, Camera, User, Download, MessageSquare, Check, Circle } from "lucide-react";
+import { ChevronRight, Camera, User, Download, MessageSquare, Check, Circle, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { PHOTO_TYPE_LABELS } from "@/types";
 import type { PhotoType } from "@/types";
 import { cn } from "@/lib/utils";
 import { toggleDatePostedStatus } from "@/actions/projects";
+import { deleteReport } from "@/actions/reports";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 interface Photo {
   id: string;
@@ -87,8 +100,10 @@ export const ReportDateList = ({ projectId, reports, postedDates }: ReportDateLi
   const [localPostedDates, setLocalPostedDates] = useState<Set<string>>(
     new Set(postedDates)
   );
+  const [deletingReportId, setDeletingReportId] = useState<string | null>(null);
+  const [localReports, setLocalReports] = useState<Report[]>(reports);
 
-  const groupedReports = groupReportsByDate(reports);
+  const groupedReports = groupReportsByDate(localReports);
 
   const toggleDate = (date: string) => {
     setOpenDates((prev) => {
@@ -138,7 +153,28 @@ export const ReportDateList = ({ projectId, reports, postedDates }: ReportDateLi
     }
   };
 
-  if (reports.length === 0) {
+  const handleDeleteReport = async (reportId: string) => {
+    setDeletingReportId(reportId);
+
+    // 楽観的更新：ローカルからレポートを削除
+    setLocalReports((prev) => prev.filter((r) => r.id !== reportId));
+
+    startTransition(async () => {
+      try {
+        await deleteReport(reportId);
+        toast.success("レポートを削除しました");
+      } catch (error) {
+        // 失敗した場合は元に戻す
+        setLocalReports(reports);
+        toast.error("削除に失敗しました");
+        console.error("Delete failed:", error);
+      } finally {
+        setDeletingReportId(null);
+      }
+    });
+  };
+
+  if (localReports.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
         まだレポートがありません
@@ -211,17 +247,51 @@ export const ReportDateList = ({ projectId, reports, postedDates }: ReportDateLi
                       className="border rounded-lg p-4 space-y-3 bg-background"
                     >
                       {/* レポートヘッダー */}
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <User className="h-4 w-4" />
-                        <span>{report.user.name}</span>
-                        <span>•</span>
-                        <span>
-                          {format(new Date(report.createdAt), "HH:mm", {
-                            locale: ja,
-                          })}
-                        </span>
-                        <span>•</span>
-                        <span>{report.photos.length}枚</span>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <User className="h-4 w-4" />
+                          <span>{report.user.name}</span>
+                          <span>•</span>
+                          <span>
+                            {format(new Date(report.createdAt), "HH:mm", {
+                              locale: ja,
+                            })}
+                          </span>
+                          <span>•</span>
+                          <span>{report.photos.length}枚</span>
+                        </div>
+
+                        {/* 削除ボタン */}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
+                              disabled={deletingReportId === report.id || isPending}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>レポートを削除</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                このレポートと{report.photos.length}枚の写真を削除します。
+                                この操作は取り消せません。
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDeleteReport(report.id)}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                削除する
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
 
                       {/* 全体コメント */}
