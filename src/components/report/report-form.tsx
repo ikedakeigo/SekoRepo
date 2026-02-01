@@ -18,6 +18,7 @@ import { PhotoDetailCard } from "./photo-detail-card";
 import { ProjectSelector } from "./project-selector";
 import { createReport } from "@/actions/reports";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import type { PhotoFormData, PhotoType } from "@/types";
 
 interface Project {
@@ -44,15 +45,45 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
     projectId?: string;
     summary?: string;
     photos?: string;
+    photoErrors?: Record<number, { title?: string }>;
   }>({});
 
   const handleProjectCreated = useCallback((project: Project) => {
     setProjects((prev) => [project, ...prev]);
   }, []);
 
+  // 案件選択時にエラーをクリア
+  const handleProjectChange = useCallback((value: string) => {
+    setProjectId(value);
+    if (value) {
+      setErrors((prev) => ({ ...prev, projectId: undefined }));
+    }
+  }, []);
+
+  // 作業内容入力時にエラーをクリア
+  const handleSummaryChange = useCallback((value: string) => {
+    setSummary(value);
+    if (value.trim()) {
+      setErrors((prev) => ({ ...prev, summary: undefined }));
+    }
+  }, []);
+
   const handlePhotoChange = useCallback(
     (index: number, data: PhotoFormData) => {
       setPhotos((prev) => prev.map((p, i) => (i === index ? data : p)));
+      // タイトルが入力されたらそのエラーをクリア
+      if (data.title.trim()) {
+        setErrors((prev) => {
+          const newPhotoErrors = { ...prev.photoErrors };
+          delete newPhotoErrors[index];
+          const hasRemainingErrors = Object.keys(newPhotoErrors).length > 0;
+          return {
+            ...prev,
+            photoErrors: hasRemainingErrors ? newPhotoErrors : undefined,
+            photos: hasRemainingErrors ? prev.photos : undefined,
+          };
+        });
+      }
     },
     []
   );
@@ -69,6 +100,7 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
 
   const validate = (): boolean => {
     const newErrors: typeof errors = {};
+    const photoErrors: Record<number, { title?: string }> = {};
 
     if (!projectId) {
       newErrors.projectId = "案件を選択してください";
@@ -78,10 +110,16 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
       newErrors.photos = "写真を1枚以上選択してください";
     }
 
-    // 各写真のバリデーション
-    const hasInvalidTitle = photos.some((photo) => !photo.title.trim());
-    if (hasInvalidTitle) {
+    // 各写真のバリデーション（タイトル必須）
+    photos.forEach((photo, index) => {
+      if (!photo.title.trim()) {
+        photoErrors[index] = { title: "タイトルを入力してください" };
+      }
+    });
+
+    if (Object.keys(photoErrors).length > 0) {
       newErrors.photos = "すべての写真にタイトルを入力してください";
+      newErrors.photoErrors = photoErrors;
     }
 
     // 今日の作業について（必須）
@@ -138,7 +176,7 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 pb-24">
+    <form onSubmit={handleSubmit} className="space-y-6 pb-36">
       {/* ヘッダー */}
       <div className="flex items-center gap-3 p-4 border-b bg-background sticky top-0 z-10">
         <Button
@@ -175,7 +213,7 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
             <ProjectSelector
               projects={projects}
               value={projectId}
-              onChange={setProjectId}
+              onChange={handleProjectChange}
               onProjectCreated={handleProjectCreated}
               error={errors.projectId}
             />
@@ -197,11 +235,11 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
               <Textarea
                 id="summary"
                 value={summary}
-                onChange={(e) => setSummary(e.target.value)}
+                onChange={(e) => handleSummaryChange(e.target.value)}
                 placeholder="例: 今日は〇〇邸で屋根の葺き替え作業を行いました。朝は少し雨が降っていましたが、午後から晴れて作業がスムーズに進みました。お客様がお茶を差し入れてくださり、とても嬉しかったです。材料の運搬時に少し道が狭かったですが、無事に完了しました。"
                 rows={5}
                 maxLength={2000}
-                className="resize-none"
+                className={cn("resize-none", errors.summary && "border-red-500 border-2")}
               />
               {errors.summary && (
                 <p className="text-sm text-red-500">{errors.summary}</p>
@@ -229,6 +267,7 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
                   data={photo}
                   onChange={(data) => handlePhotoChange(index, data)}
                   onRemove={() => handlePhotoRemove(index)}
+                  errors={errors.photoErrors?.[index]}
                 />
               ))}
             </div>
@@ -236,8 +275,8 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
         )}
       </div>
 
-      {/* 送信ボタン（固定フッター） */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t">
+      {/* 送信ボタン（モバイルナビの上に配置） */}
+      <div className="fixed bottom-16 left-0 right-0 p-4 bg-background border-t z-40 md:bottom-0">
         <Button
           type="submit"
           className="w-full"

@@ -26,6 +26,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Plus, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { createProject } from "@/actions/projects";
 
 interface Project {
@@ -98,7 +99,7 @@ export const ProjectSelector = ({
 
       <div className="flex gap-2">
         <Select value={value} onValueChange={onChange}>
-          <SelectTrigger className="flex-1">
+          <SelectTrigger className={cn("flex-1", error && "border-red-500 border-2")}>
             <SelectValue placeholder="案件を選択" />
           </SelectTrigger>
           <SelectContent>

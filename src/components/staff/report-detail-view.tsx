@@ -219,7 +219,7 @@ export const ReportDetailView = ({ report }: ReportDetailViewProps) => {
   const canAddMorePhotos = remainingSlots > 0;
 
   return (
-    <div className="min-h-screen pb-20">
+    <div className="min-h-screen pb-36">
       {/* ヘッダー */}
       <div className="sticky top-0 z-10 bg-background border-b">
         <div className="flex items-center justify-between p-4">
@@ -373,9 +373,9 @@ export const ReportDetailView = ({ report }: ReportDetailViewProps) => {
         )}
       </div>
 
-      {/* 固定フッター（編集モード時のみ） */}
+      {/* 固定フッター（編集モード時のみ・モバイルナビの上） */}
       {isEditing && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t">
+        <div className="fixed bottom-16 left-0 right-0 p-4 bg-background border-t z-40 md:bottom-0">
           <Button
             className="w-full"
             onClick={handleSave}

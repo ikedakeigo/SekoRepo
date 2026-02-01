@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { PHOTO_TYPE_LABELS } from "@/types";
 import type { PhotoFormData, PhotoType } from "@/types";
 
@@ -122,6 +123,7 @@ export const PhotoDetailCard = ({
             onChange={(e) => handleChange("title", e.target.value)}
             placeholder="例: 大棟のズレ発見"
             maxLength={200}
+            className={cn(errors?.title && "border-red-500 border-2")}
           />
           {errors?.title && (
             <p className="text-sm text-red-500">{errors.title}</p>
