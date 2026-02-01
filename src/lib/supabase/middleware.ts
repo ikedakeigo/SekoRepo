@@ -7,7 +7,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 /** 認証不要なパス */
-const PUBLIC_PATHS = ["/login"];
+const PUBLIC_PATHS = ["/login", "/signup"];
 
 /** 管理者専用パス */
 const ADMIN_PATHS = ["/dashboard", "/projects", "/settings"];
@@ -16,21 +16,12 @@ const ADMIN_PATHS = ["/dashboard", "/projects", "/settings"];
  * セッション更新と認証チェック
  */
 export const updateSession = async (request: NextRequest) => {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  // Supabase未設定の場合はスキップ（開発用）
-  if (
-    !supabaseUrl ||
-    !supabaseAnonKey ||
-    supabaseUrl.includes("placeholder")
-  ) {
-    return NextResponse.next({ request });
-  }
-
   let response = NextResponse.next({ request });
 
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
     cookies: {
       getAll: () => {
         return request.cookies.getAll();
