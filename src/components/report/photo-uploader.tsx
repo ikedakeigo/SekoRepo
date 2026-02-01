@@ -5,11 +5,12 @@
 
 "use client";
 
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Camera, X, Plus } from "lucide-react";
+import { Camera, X, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { compressImages } from "@/lib/image-compression";
 import type { PhotoFormData, PhotoType } from "@/types";
 
 interface PhotoUploaderProps {
@@ -40,21 +41,30 @@ export const PhotoUploader = ({
   maxPhotos = 10,
 }: PhotoUploaderProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
 
   const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files;
       if (!files) return;
 
       const remainingSlots = maxPhotos - photos.length;
       const filesToAdd = Array.from(files).slice(0, remainingSlots);
 
-      const newPhotos = filesToAdd.map((file) => {
-        const previewUrl = URL.createObjectURL(file);
-        return createDefaultPhotoData(file, previewUrl);
-      });
+      // 圧縮処理開始
+      setIsCompressing(true);
+      try {
+        const compressedFiles = await compressImages(filesToAdd);
 
-      onChange([...photos, ...newPhotos]);
+        const newPhotos = compressedFiles.map((file) => {
+          const previewUrl = URL.createObjectURL(file);
+          return createDefaultPhotoData(file, previewUrl);
+        });
+
+        onChange([...photos, ...newPhotos]);
+      } finally {
+        setIsCompressing(false);
+      }
 
       // inputをリセット
       if (inputRef.current) {
@@ -125,7 +135,14 @@ export const PhotoUploader = ({
         )}
       </div>
 
-      {photos.length === 0 && (
+      {isCompressing && (
+        <div className="flex items-center justify-center gap-2 py-4 text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span className="text-sm">画像を圧縮中...</span>
+        </div>
+      )}
+
+      {photos.length === 0 && !isCompressing && (
         <Button
           type="button"
           variant="outline"
@@ -149,7 +166,7 @@ export const PhotoUploader = ({
       />
 
       <p className="text-xs text-muted-foreground">
-        JPEG, PNG, WebP形式 / 最大10MB / 最大{maxPhotos}枚
+        JPEG, PNG, WebP形式 / 最大{maxPhotos}枚（自動圧縮）
       </p>
     </div>
   );

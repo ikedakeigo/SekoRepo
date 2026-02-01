@@ -62,6 +62,7 @@ const DashboardPage = async () => {
                             alt=""
                             fill
                             className="object-cover"
+                            unoptimized
                           />
                         </div>
                       ))}

@@ -66,6 +66,7 @@ export const PhotoEditCard = ({
             alt={data.title || `写真 ${index + 1}`}
             fill
             className="object-cover"
+            unoptimized
           />
         </div>
 

@@ -32,6 +32,7 @@ const HistoryPage = async () => {
                           alt={report.projectName}
                           fill
                           className="object-cover"
+                          unoptimized
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
