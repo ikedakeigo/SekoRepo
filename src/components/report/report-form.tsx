@@ -104,14 +104,28 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
     setIsSubmitting(true);
 
     try {
-      await createReport({
-        projectId,
-        summary: summary.trim() || undefined,
-        photos: photos.map((photo) => ({
-          ...photo,
-          photoType: photo.photoType as PhotoType,
-        })),
+      // FormDataを作成（File オブジェクトの送信にはFormDataが必要）
+      const formData = new FormData();
+      formData.append("projectId", projectId);
+      formData.append("summary", summary.trim());
+
+      // 写真データをJSON化（ファイル以外のメタデータ）
+      const photosMetadata = photos.map((photo) => ({
+        photoType: photo.photoType,
+        title: photo.title,
+        comment: photo.comment,
+        customerFeedback: photo.customerFeedback,
+      }));
+      formData.append("photosMetadata", JSON.stringify(photosMetadata));
+
+      // 写真ファイルを追加
+      photos.forEach((photo, index) => {
+        if (photo.file) {
+          formData.append(`photo_${index}`, photo.file);
+        }
       });
+
+      await createReport(formData);
 
       toast.success("レポートを送信しました");
       router.push("/?success=true");
