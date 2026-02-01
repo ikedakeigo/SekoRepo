@@ -59,6 +59,7 @@ export const PhotoCard = ({ photo }: PhotoCardProps) => {
               alt={photo.title}
               fill
               className="object-cover"
+              unoptimized
             />
           </div>
 
