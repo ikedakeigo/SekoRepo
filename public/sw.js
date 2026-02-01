@@ -3,6 +3,7 @@ const CACHE_NAME = "sekorepo-v1";
 const STATIC_ASSETS = [
   "/",
   "/manifest.webmanifest",
+  "/icons/icon-180x180.png",
   "/icons/icon-192x192.png",
   "/icons/icon-512x512.png",
 ];
