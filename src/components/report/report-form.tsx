@@ -45,15 +45,45 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
     projectId?: string;
     summary?: string;
     photos?: string;
+    photoErrors?: Record<number, { title?: string }>;
   }>({});
 
   const handleProjectCreated = useCallback((project: Project) => {
     setProjects((prev) => [project, ...prev]);
   }, []);
 
+  // 案件選択時にエラーをクリア
+  const handleProjectChange = useCallback((value: string) => {
+    setProjectId(value);
+    if (value) {
+      setErrors((prev) => ({ ...prev, projectId: undefined }));
+    }
+  }, []);
+
+  // 作業内容入力時にエラーをクリア
+  const handleSummaryChange = useCallback((value: string) => {
+    setSummary(value);
+    if (value.trim()) {
+      setErrors((prev) => ({ ...prev, summary: undefined }));
+    }
+  }, []);
+
   const handlePhotoChange = useCallback(
     (index: number, data: PhotoFormData) => {
       setPhotos((prev) => prev.map((p, i) => (i === index ? data : p)));
+      // タイトルが入力されたらそのエラーをクリア
+      if (data.title.trim()) {
+        setErrors((prev) => {
+          const newPhotoErrors = { ...prev.photoErrors };
+          delete newPhotoErrors[index];
+          const hasRemainingErrors = Object.keys(newPhotoErrors).length > 0;
+          return {
+            ...prev,
+            photoErrors: hasRemainingErrors ? newPhotoErrors : undefined,
+            photos: hasRemainingErrors ? prev.photos : undefined,
+          };
+        });
+      }
     },
     []
   );
@@ -70,6 +100,7 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
 
   const validate = (): boolean => {
     const newErrors: typeof errors = {};
+    const photoErrors: Record<number, { title?: string }> = {};
 
     if (!projectId) {
       newErrors.projectId = "案件を選択してください";
@@ -79,10 +110,16 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
       newErrors.photos = "写真を1枚以上選択してください";
     }
 
-    // 各写真のバリデーション
-    const hasInvalidTitle = photos.some((photo) => !photo.title.trim());
-    if (hasInvalidTitle) {
+    // 各写真のバリデーション（タイトル必須）
+    photos.forEach((photo, index) => {
+      if (!photo.title.trim()) {
+        photoErrors[index] = { title: "タイトルを入力してください" };
+      }
+    });
+
+    if (Object.keys(photoErrors).length > 0) {
       newErrors.photos = "すべての写真にタイトルを入力してください";
+      newErrors.photoErrors = photoErrors;
     }
 
     // 今日の作業について（必須）
@@ -176,7 +213,7 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
             <ProjectSelector
               projects={projects}
               value={projectId}
-              onChange={setProjectId}
+              onChange={handleProjectChange}
               onProjectCreated={handleProjectCreated}
               error={errors.projectId}
             />
