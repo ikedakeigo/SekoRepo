@@ -8,7 +8,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "./auth";
 import { uploadPhoto } from "@/lib/supabase/storage";
 import { revalidatePath } from "next/cache";
-import type { PhotoFormData } from "@/types";
+import type { PhotoFormData, PhotoType } from "@/types";
+import type { UpdatePhotoSchemaType } from "@/lib/validations/report";
 
 /**
  * レポートを作成（写真アップロード含む）
@@ -171,4 +172,92 @@ export const getDashboardStats = async () => {
     activeProjects,
     pendingProjects,
   };
+};
+
+/**
+ * レポート詳細を取得（所有権チェック付き）
+ */
+export const getReportById = async (reportId: string) => {
+  const userId = await requireAuth();
+
+  const report = await prisma.report.findFirst({
+    where: {
+      id: reportId,
+      userId: userId,
+    },
+    include: {
+      project: {
+        select: { id: true, name: true, location: true },
+      },
+      photos: {
+        orderBy: { sortOrder: "asc" },
+      },
+    },
+  });
+
+  if (!report) {
+    return null;
+  }
+
+  return {
+    id: report.id,
+    projectId: report.projectId,
+    projectName: report.project.name,
+    projectLocation: report.project.location,
+    createdAt: report.createdAt,
+    updatedAt: report.updatedAt,
+    photos: report.photos.map((photo) => ({
+      id: photo.id,
+      photoUrl: photo.photoUrl,
+      photoType: photo.photoType as PhotoType,
+      title: photo.title,
+      comment: photo.comment,
+      customerFeedback: photo.customerFeedback,
+      sortOrder: photo.sortOrder,
+    })),
+  };
+};
+
+/**
+ * レポートの写真情報を更新
+ */
+export const updateReportPhotos = async (
+  reportId: string,
+  photos: UpdatePhotoSchemaType[]
+) => {
+  const userId = await requireAuth();
+
+  // 所有権確認
+  const report = await prisma.report.findFirst({
+    where: { id: reportId, userId: userId },
+  });
+
+  if (!report) {
+    throw new Error("レポートが見つかりません");
+  }
+
+  // トランザクションで全写真を更新
+  await prisma.$transaction(
+    photos.map((photo) =>
+      prisma.photo.update({
+        where: {
+          id: photo.id,
+          reportId: reportId,
+        },
+        data: {
+          title: photo.title,
+          comment: photo.comment || null,
+          customerFeedback: photo.customerFeedback || null,
+        },
+      })
+    )
+  );
+
+  revalidatePath(`/history/${reportId}`);
+  revalidatePath("/history");
+  revalidatePath("/");
+  revalidatePath("/dashboard");
+  revalidatePath(`/projects/${report.projectId}`);
+
+  return { success: true };
 };
