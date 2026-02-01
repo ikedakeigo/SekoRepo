@@ -320,6 +320,7 @@ export const ReportDateList = ({ projectId, reports, postedDates }: ReportDateLi
                                 alt={photo.title}
                                 fill
                                 className="object-cover"
+                                unoptimized
                               />
                             </div>
 
