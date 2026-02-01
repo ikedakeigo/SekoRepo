@@ -16,6 +16,7 @@ import type { UpdatePhotoSchemaType } from "@/lib/validations/report";
  */
 export const createReport = async (data: {
   projectId: string;
+  summary?: string;
   photos: PhotoFormData[];
 }) => {
   const userId = await requireAuth();
@@ -27,6 +28,7 @@ export const createReport = async (data: {
       data: {
         projectId: data.projectId,
         userId: userId,
+        summary: data.summary || null,
       },
     });
 
@@ -204,6 +206,7 @@ export const getReportById = async (reportId: string) => {
     projectId: report.projectId,
     projectName: report.project.name,
     projectLocation: report.project.location,
+    summary: report.summary,
     createdAt: report.createdAt,
     updatedAt: report.updatedAt,
     photos: report.photos.map((photo) => ({
@@ -311,6 +314,38 @@ export const addPhotosToReport = async (
     });
 
     await Promise.all(photoPromises);
+  });
+
+  revalidatePath(`/history/${reportId}`);
+  revalidatePath("/history");
+  revalidatePath("/");
+  revalidatePath("/dashboard");
+  revalidatePath(`/projects/${report.projectId}`);
+
+  return { success: true };
+};
+
+/**
+ * レポートの全体コメントを更新
+ */
+export const updateReportSummary = async (
+  reportId: string,
+  summary: string
+) => {
+  const userId = await requireAuth();
+
+  // 所有権確認
+  const report = await prisma.report.findFirst({
+    where: { id: reportId, userId: userId },
+  });
+
+  if (!report) {
+    throw new Error("レポートが見つかりません");
+  }
+
+  await prisma.report.update({
+    where: { id: reportId },
+    data: { summary: summary.trim() || null },
   });
 
   revalidatePath(`/history/${reportId}`);
