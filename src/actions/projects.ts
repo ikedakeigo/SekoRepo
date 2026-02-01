@@ -181,3 +181,61 @@ export const deleteProject = async (projectId: string) => {
   revalidatePath("/projects");
   revalidatePath("/dashboard");
 };
+
+/**
+ * 案件の投稿済み日付一覧を取得
+ */
+export const getProjectPostedDates = async (projectId: string) => {
+  await requireAuth();
+
+  const postedDates = await prisma.projectPostedDate.findMany({
+    where: { projectId },
+    select: { date: true },
+  });
+
+  // 日付文字列の配列として返す（YYYY-MM-DD形式）
+  return postedDates.map((pd) => {
+    const d = new Date(pd.date);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
+};
+
+/**
+ * 日付の投稿済みステータスをトグル
+ */
+export const toggleDatePostedStatus = async (
+  projectId: string,
+  dateString: string // YYYY-MM-DD形式
+) => {
+  await requireAdmin();
+
+  // 日付文字列をDateオブジェクトに変換（UTC）
+  const date = new Date(dateString + "T00:00:00.000Z");
+
+  // 既存レコードを検索
+  const existing = await prisma.projectPostedDate.findUnique({
+    where: {
+      projectId_date: {
+        projectId,
+        date,
+      },
+    },
+  });
+
+  if (existing) {
+    // 存在する場合は削除（投稿済み解除）
+    await prisma.projectPostedDate.delete({
+      where: { id: existing.id },
+    });
+  } else {
+    // 存在しない場合は作成（投稿済みにする）
+    await prisma.projectPostedDate.create({
+      data: {
+        projectId,
+        date,
+      },
+    });
+  }
+
+  revalidatePath(`/projects/${projectId}`);
+};

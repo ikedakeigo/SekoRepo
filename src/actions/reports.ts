@@ -5,48 +5,78 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "./auth";
-import { uploadPhoto } from "@/lib/supabase/storage";
+import { requireAuth, requireAdmin } from "./auth";
+import { uploadPhoto, deletePhoto } from "@/lib/supabase/storage";
 import { revalidatePath } from "next/cache";
-import type { PhotoFormData } from "@/types";
+import type { PhotoType } from "@/types";
+import type { UpdatePhotoSchemaType } from "@/lib/validations/report";
+
+/** 写真メタデータの型 */
+interface PhotoMetadata {
+  photoType: string;
+  title: string;
+  comment: string;
+  customerFeedback: string;
+}
 
 /**
  * レポートを作成（写真アップロード含む）
+ * FormDataを受け取り、ファイルとメタデータを処理
  */
-export const createReport = async (data: {
-  projectId: string;
-  photos: PhotoFormData[];
-}) => {
+export const createReport = async (formData: FormData) => {
   const userId = await requireAuth();
+
+  // FormDataからデータを抽出
+  const projectId = formData.get("projectId") as string;
+  const summary = formData.get("summary") as string;
+  const photosMetadataJson = formData.get("photosMetadata") as string;
+
+  if (!projectId) {
+    throw new Error("案件IDが必要です");
+  }
+
+  const photosMetadata: PhotoMetadata[] = JSON.parse(photosMetadataJson || "[]");
+
+  // 写真ファイルを取得
+  const photoFiles: File[] = [];
+  for (let i = 0; i < photosMetadata.length; i++) {
+    const file = formData.get(`photo_${i}`) as File | null;
+    if (file) {
+      photoFiles.push(file);
+    }
+  }
+
+  if (photoFiles.length === 0) {
+    throw new Error("写真が必要です");
+  }
 
   // トランザクションで実行
   const report = await prisma.$transaction(async (tx) => {
     // 1. レポート作成
     const newReport = await tx.report.create({
       data: {
-        projectId: data.projectId,
+        projectId: projectId,
         userId: userId,
+        summary: summary || null,
       },
     });
 
     // 2. 写真をアップロード＆レコード作成
-    const photoPromises = data.photos.map(async (photo, index) => {
-      if (!photo.file) {
-        throw new Error("写真ファイルが必要です");
-      }
+    const photoPromises = photoFiles.map(async (file, index) => {
+      const metadata = photosMetadata[index];
 
       // Storage にアップロード
-      const photoUrl = await uploadPhoto(photo.file, newReport.id);
+      const photoUrl = await uploadPhoto(file, newReport.id);
 
       // DB にレコード作成
       return tx.photo.create({
         data: {
           reportId: newReport.id,
           photoUrl,
-          photoType: photo.photoType,
-          title: photo.title,
-          comment: photo.comment || null,
-          customerFeedback: photo.customerFeedback || null,
+          photoType: metadata.photoType,
+          title: metadata.title,
+          comment: metadata.comment || null,
+          customerFeedback: metadata.customerFeedback || null,
           sortOrder: index,
         },
       });
@@ -60,7 +90,7 @@ export const createReport = async (data: {
   revalidatePath("/");
   revalidatePath("/history");
   revalidatePath("/dashboard");
-  revalidatePath(`/projects/${data.projectId}`);
+  revalidatePath(`/projects/${projectId}`);
 
   return report;
 };
@@ -171,4 +201,250 @@ export const getDashboardStats = async () => {
     activeProjects,
     pendingProjects,
   };
+};
+
+/**
+ * レポート詳細を取得（所有権チェック付き）
+ */
+export const getReportById = async (reportId: string) => {
+  const userId = await requireAuth();
+
+  const report = await prisma.report.findFirst({
+    where: {
+      id: reportId,
+      userId: userId,
+    },
+    include: {
+      project: {
+        select: { id: true, name: true, location: true },
+      },
+      photos: {
+        orderBy: { sortOrder: "asc" },
+      },
+    },
+  });
+
+  if (!report) {
+    return null;
+  }
+
+  return {
+    id: report.id,
+    projectId: report.projectId,
+    projectName: report.project.name,
+    projectLocation: report.project.location,
+    summary: report.summary,
+    createdAt: report.createdAt,
+    updatedAt: report.updatedAt,
+    photos: report.photos.map((photo) => ({
+      id: photo.id,
+      photoUrl: photo.photoUrl,
+      photoType: photo.photoType as PhotoType,
+      title: photo.title,
+      comment: photo.comment,
+      customerFeedback: photo.customerFeedback,
+      sortOrder: photo.sortOrder,
+    })),
+  };
+};
+
+/**
+ * レポートの写真情報を更新
+ */
+export const updateReportPhotos = async (
+  reportId: string,
+  photos: UpdatePhotoSchemaType[]
+) => {
+  const userId = await requireAuth();
+
+  // 所有権確認
+  const report = await prisma.report.findFirst({
+    where: { id: reportId, userId: userId },
+  });
+
+  if (!report) {
+    throw new Error("レポートが見つかりません");
+  }
+
+  // トランザクションで全写真を更新
+  await prisma.$transaction(
+    photos.map((photo) =>
+      prisma.photo.update({
+        where: {
+          id: photo.id,
+          reportId: reportId,
+        },
+        data: {
+          title: photo.title,
+          comment: photo.comment || null,
+          customerFeedback: photo.customerFeedback || null,
+        },
+      })
+    )
+  );
+
+  revalidatePath(`/history/${reportId}`);
+  revalidatePath("/history");
+  revalidatePath("/");
+  revalidatePath("/dashboard");
+  revalidatePath(`/projects/${report.projectId}`);
+
+  return { success: true };
+};
+
+/**
+ * レポートに写真を追加
+ * FormDataを受け取り、ファイルとメタデータを処理
+ */
+export const addPhotosToReport = async (formData: FormData) => {
+  const userId = await requireAuth();
+
+  const reportId = formData.get("reportId") as string;
+  const photosMetadataJson = formData.get("photosMetadata") as string;
+
+  if (!reportId) {
+    throw new Error("レポートIDが必要です");
+  }
+
+  const photosMetadata: PhotoMetadata[] = JSON.parse(photosMetadataJson || "[]");
+
+  // 写真ファイルを取得
+  const photoFiles: File[] = [];
+  for (let i = 0; i < photosMetadata.length; i++) {
+    const file = formData.get(`photo_${i}`) as File | null;
+    if (file) {
+      photoFiles.push(file);
+    }
+  }
+
+  if (photoFiles.length === 0) {
+    throw new Error("写真が必要です");
+  }
+
+  // 所有権確認
+  const report = await prisma.report.findFirst({
+    where: { id: reportId, userId: userId },
+    include: {
+      _count: { select: { photos: true } },
+    },
+  });
+
+  if (!report) {
+    throw new Error("レポートが見つかりません");
+  }
+
+  // 現在の写真数を取得して、sortOrderを計算
+  const startSortOrder = report._count.photos;
+
+  // トランザクションで写真を追加
+  await prisma.$transaction(async (tx) => {
+    const photoPromises = photoFiles.map(async (file, index) => {
+      const metadata = photosMetadata[index];
+
+      // Storage にアップロード
+      const photoUrl = await uploadPhoto(file, reportId);
+
+      // DB にレコード作成
+      return tx.photo.create({
+        data: {
+          reportId: reportId,
+          photoUrl,
+          photoType: metadata.photoType,
+          title: metadata.title,
+          comment: metadata.comment || null,
+          customerFeedback: metadata.customerFeedback || null,
+          sortOrder: startSortOrder + index,
+        },
+      });
+    });
+
+    await Promise.all(photoPromises);
+  });
+
+  revalidatePath(`/history/${reportId}`);
+  revalidatePath("/history");
+  revalidatePath("/");
+  revalidatePath("/dashboard");
+  revalidatePath(`/projects/${report.projectId}`);
+
+  return { success: true };
+};
+
+/**
+ * レポートの全体コメントを更新
+ */
+export const updateReportSummary = async (
+  reportId: string,
+  summary: string
+) => {
+  const userId = await requireAuth();
+
+  // 所有権確認
+  const report = await prisma.report.findFirst({
+    where: { id: reportId, userId: userId },
+  });
+
+  if (!report) {
+    throw new Error("レポートが見つかりません");
+  }
+
+  await prisma.report.update({
+    where: { id: reportId },
+    data: { summary: summary.trim() || null },
+  });
+
+  revalidatePath(`/history/${reportId}`);
+  revalidatePath("/history");
+  revalidatePath("/");
+  revalidatePath("/dashboard");
+  revalidatePath(`/projects/${report.projectId}`);
+
+  return { success: true };
+};
+
+/**
+ * レポートを削除（管理者専用）
+ * レポートに紐づく写真もストレージから削除
+ */
+export const deleteReport = async (reportId: string) => {
+  await requireAdmin();
+
+  // レポートと写真を取得
+  const report = await prisma.report.findUnique({
+    where: { id: reportId },
+    include: {
+      photos: {
+        select: { photoUrl: true },
+      },
+    },
+  });
+
+  if (!report) {
+    throw new Error("レポートが見つかりません");
+  }
+
+  const projectId = report.projectId;
+
+  // ストレージから写真を削除
+  const deletePromises = report.photos.map(async (photo) => {
+    try {
+      await deletePhoto(photo.photoUrl);
+    } catch (error) {
+      console.error(`Failed to delete photo: ${photo.photoUrl}`, error);
+      // ストレージ削除に失敗してもDB削除は続行
+    }
+  });
+  await Promise.all(deletePromises);
+
+  // DBからレポートを削除（カスケードで写真も削除される）
+  await prisma.report.delete({
+    where: { id: reportId },
+  });
+
+  revalidatePath("/");
+  revalidatePath("/history");
+  revalidatePath("/dashboard");
+  revalidatePath(`/projects/${projectId}`);
+
+  return { success: true };
 };

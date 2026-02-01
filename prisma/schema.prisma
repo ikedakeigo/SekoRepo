@@ -56,6 +56,7 @@ model Report {
   id        String   @id @default(uuid())
   projectId String   @map("project_id")
   userId    String   @map("user_id")
+  summary   String?  // 全体コメント・概要（その日の作業内容、お客様の様子、スタッフの気持ちなど）
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -90,4 +91,18 @@ model Photo {
   @@index([reportId])
   @@index([photoType])
   @@map("photos")
+}
+
+/// 案件の日付別投稿済みステータス
+model ProjectPostedDate {
+  id        String   @id @default(uuid())
+  projectId String   @map("project_id")
+  date      DateTime @db.Date // 日付のみ（時刻なし）
+  isPosted  Boolean  @default(true) @map("is_posted")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([projectId, date])
+  @@index([projectId])
+  @@map("project_posted_dates")
 }
