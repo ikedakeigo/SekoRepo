@@ -138,6 +138,35 @@ export interface CreateProjectData {
   location?: string;
 }
 
+/** 写真編集データ（既存写真の更新用） */
+export interface PhotoEditData {
+  id: string;
+  photoUrl: string;
+  photoType: PhotoType;
+  title: string;
+  comment: string;
+  customerFeedback: string;
+}
+
+/** レポート詳細データ */
+export interface ReportDetail {
+  id: string;
+  projectId: string;
+  projectName: string;
+  projectLocation?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  photos: {
+    id: string;
+    photoUrl: string;
+    photoType: PhotoType;
+    title: string;
+    comment?: string | null;
+    customerFeedback?: string | null;
+    sortOrder: number;
+  }[];
+}
+
 // ============================================
 // API レスポンス用
 // ============================================
