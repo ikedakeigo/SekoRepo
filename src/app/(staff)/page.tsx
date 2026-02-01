@@ -59,11 +59,12 @@ const HomePage = async () => {
         </CardHeader>
         <CardContent>
           {recentReports.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-1">
               {recentReports.map((report) => (
-                <div
+                <Link
                   key={report.id}
-                  className="flex items-center justify-between py-2 border-b last:border-0"
+                  href={`/history/${report.id}`}
+                  className="flex items-center justify-between py-3 border-b last:border-0 hover:bg-muted/50 -mx-2 px-2 rounded-lg transition-colors"
                 >
                   <div>
                     <p className="font-medium text-sm">{report.projectName}</p>
@@ -76,7 +77,8 @@ const HomePage = async () => {
                       写真{report.photoCount}枚
                     </p>
                   </div>
-                </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </Link>
               ))}
             </div>
           ) : (

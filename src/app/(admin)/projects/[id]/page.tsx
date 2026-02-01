@@ -4,12 +4,13 @@
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProjectWithPhotos, updateProjectStatus } from "@/actions/projects";
-import { PhotoTimeline } from "@/components/admin";
+import { getProjectWithPhotos, updateProjectStatus, getProjectPostedDates } from "@/actions/projects";
+import { PhotoTimeline, ReportDateList } from "@/components/admin";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, MapPin, Camera, Calendar, Check } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, MapPin, Camera, Calendar, CheckCircle, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import type { ProjectStatus } from "@/types";
@@ -34,18 +35,29 @@ const ProjectDetailPage = async ({
   const { id } = await params;
 
   let project;
+  let postedDates: string[] = [];
   try {
     project = await getProjectWithPhotos(id);
-  } catch {
+  } catch (error) {
+    console.error("getProjectWithPhotos error:", error);
     notFound();
+  }
+
+  try {
+    postedDates = await getProjectPostedDates(id);
+  } catch (error) {
+    console.error("getProjectPostedDates error:", error);
+    // 投稿済み日付の取得に失敗しても、空配列で続行
+    postedDates = [];
   }
 
   const status = project.status as ProjectStatus;
   const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.active;
 
-  const markAsPosted = async () => {
+  const toggleStatus = async () => {
     "use server";
-    await updateProjectStatus(id, "posted");
+    const newStatus = status === "completed" ? "active" : "completed";
+    await updateProjectStatus(id, newStatus);
   };
 
   return (
@@ -90,25 +102,46 @@ const ProjectDetailPage = async ({
             </div>
           </div>
 
+          {/* ステータス変更ボタン（トグル） */}
           {status !== "posted" && (
-            <form action={markAsPosted} className="pt-4">
-              <Button type="submit" variant="outline" className="w-full">
-                <Check className="mr-2 h-4 w-4" />
-                投稿済みにする
-              </Button>
+            <form action={toggleStatus} className="pt-4">
+              {status === "active" ? (
+                <Button type="submit" variant="outline" className="w-full">
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  施工完了にする
+                </Button>
+              ) : (
+                <Button type="submit" variant="outline" className="w-full">
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  進行中に戻す
+                </Button>
+              )}
             </form>
           )}
         </CardContent>
       </Card>
 
-      {/* 写真タイムライン */}
+      {/* タブ切り替え：日付別 / タイムライン */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">写真タイムライン</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <PhotoTimeline photos={project.photos} />
-        </CardContent>
+        <Tabs defaultValue="by-date">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">写真・レポート</CardTitle>
+              <TabsList>
+                <TabsTrigger value="by-date">日付別</TabsTrigger>
+                <TabsTrigger value="timeline">タイムライン</TabsTrigger>
+              </TabsList>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <TabsContent value="by-date" className="mt-0">
+              <ReportDateList projectId={id} reports={project.reports} postedDates={postedDates} />
+            </TabsContent>
+            <TabsContent value="timeline" className="mt-0">
+              <PhotoTimeline photos={project.photos} />
+            </TabsContent>
+          </CardContent>
+        </Tabs>
       </Card>
     </div>
   );

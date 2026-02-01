@@ -3,9 +3,10 @@
  */
 
 import Image from "next/image";
+import Link from "next/link";
 import { getUserReports } from "@/actions/reports";
 import { Card, CardContent } from "@/components/ui/card";
-import { Camera } from "lucide-react";
+import { Camera, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 
@@ -19,42 +20,47 @@ const HistoryPage = async () => {
       {reports.length > 0 ? (
         <div className="space-y-3">
           {reports.map((report) => (
-            <Card key={report.id}>
-              <CardContent className="p-4">
-                <div className="flex gap-4">
-                  {/* サムネイル */}
-                  <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                    {report.thumbnailUrl ? (
-                      <Image
-                        src={report.thumbnailUrl}
-                        alt={report.projectName}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Camera className="h-6 w-6 text-muted-foreground" />
-                      </div>
-                    )}
-                  </div>
+            <Link key={report.id} href={`/history/${report.id}`}>
+              <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
+                <CardContent className="p-4">
+                  <div className="flex gap-4 items-center">
+                    {/* サムネイル */}
+                    <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                      {report.thumbnailUrl ? (
+                        <Image
+                          src={report.thumbnailUrl}
+                          alt={report.projectName}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Camera className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
 
-                  {/* 情報 */}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium truncate">
-                      {report.projectName}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      写真 {report.photoCount}枚
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {format(new Date(report.createdAt), "yyyy年M月d日 HH:mm", {
-                        locale: ja,
-                      })}
-                    </p>
+                    {/* 情報 */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium truncate">
+                        {report.projectName}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        写真 {report.photoCount}枚
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {format(new Date(report.createdAt), "yyyy年M月d日 HH:mm", {
+                          locale: ja,
+                        })}
+                      </p>
+                    </div>
+
+                    {/* 矢印 */}
+                    <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       ) : (
