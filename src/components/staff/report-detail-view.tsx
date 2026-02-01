@@ -176,7 +176,26 @@ export const ReportDetailView = ({ report }: ReportDetailViewProps) => {
 
         // 新規写真の追加
         if (newPhotos.length > 0) {
-          await addPhotosToReport(report.id, newPhotos);
+          const formData = new FormData();
+          formData.append("reportId", report.id);
+
+          // 写真メタデータをJSON化
+          const photosMetadata = newPhotos.map((photo) => ({
+            photoType: photo.photoType,
+            title: photo.title,
+            comment: photo.comment,
+            customerFeedback: photo.customerFeedback,
+          }));
+          formData.append("photosMetadata", JSON.stringify(photosMetadata));
+
+          // 写真ファイルを追加
+          newPhotos.forEach((photo, index) => {
+            if (photo.file) {
+              formData.append(`photo_${index}`, photo.file);
+            }
+          });
+
+          await addPhotosToReport(formData);
         }
 
         // 全体コメントの更新（変更があった場合のみ）
