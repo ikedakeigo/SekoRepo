@@ -14,13 +14,17 @@ import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { PhotoViewCard } from "./photo-view-card";
 import { PhotoEditCard } from "./photo-edit-card";
-import { updateReportPhotos } from "@/actions/reports";
-import { updatePhotoSchema } from "@/lib/validations/report";
-import type { ReportDetail, PhotoEditData } from "@/types";
+import { PhotoUploader } from "@/components/report/photo-uploader";
+import { PhotoDetailCard } from "@/components/report/photo-detail-card";
+import { updateReportPhotos, addPhotosToReport } from "@/actions/reports";
+import { updatePhotoSchema, photoFormSchema } from "@/lib/validations/report";
+import type { ReportDetail, PhotoEditData, PhotoFormData } from "@/types";
 
 interface ReportDetailViewProps {
   report: ReportDetail;
 }
+
+const MAX_TOTAL_PHOTOS = 10;
 
 /**
  * レポート詳細画面
@@ -39,8 +43,12 @@ export const ReportDetailView = ({ report }: ReportDetailViewProps) => {
       customerFeedback: photo.customerFeedback || "",
     }))
   );
+  const [newPhotos, setNewPhotos] = useState<PhotoFormData[]>([]);
   const [errors, setErrors] = useState<
     Record<string, { title?: string; comment?: string; customerFeedback?: string }>
+  >({});
+  const [newPhotoErrors, setNewPhotoErrors] = useState<
+    Record<number, { photoType?: string; title?: string; comment?: string; customerFeedback?: string }>
   >({});
 
   const handleBack = () => {
@@ -50,6 +58,7 @@ export const ReportDetailView = ({ report }: ReportDetailViewProps) => {
   const handleStartEdit = () => {
     setIsEditing(true);
     setErrors({});
+    setNewPhotoErrors({});
   };
 
   const handleCancelEdit = () => {
@@ -64,17 +73,41 @@ export const ReportDetailView = ({ report }: ReportDetailViewProps) => {
         customerFeedback: photo.customerFeedback || "",
       }))
     );
+    // 新しい写真のプレビューURLを解放
+    newPhotos.forEach((photo) => {
+      if (photo.previewUrl) {
+        URL.revokeObjectURL(photo.previewUrl);
+      }
+    });
+    setNewPhotos([]);
     setIsEditing(false);
     setErrors({});
+    setNewPhotoErrors({});
   };
 
   const handlePhotoChange = (index: number, data: PhotoEditData) => {
     setEditData((prev) => prev.map((p, i) => (i === index ? data : p)));
   };
 
+  const handleNewPhotosChange = (photos: PhotoFormData[]) => {
+    setNewPhotos(photos);
+  };
+
+  const handleNewPhotoChange = (index: number, data: PhotoFormData) => {
+    setNewPhotos((prev) => prev.map((p, i) => (i === index ? data : p)));
+  };
+
+  const handleNewPhotoRemove = (index: number) => {
+    const photoToRemove = newPhotos[index];
+    if (photoToRemove.previewUrl) {
+      URL.revokeObjectURL(photoToRemove.previewUrl);
+    }
+    setNewPhotos((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSave = () => {
-    // バリデーション
-    const newErrors: Record<
+    // 既存写真のバリデーション
+    const existingErrors: Record<
       string,
       { title?: string; comment?: string; customerFeedback?: string }
     > = {};
@@ -91,18 +124,41 @@ export const ReportDetailView = ({ report }: ReportDetailViewProps) => {
             fieldErrors[field] = issue.message;
           }
         });
-        newErrors[photo.id] = fieldErrors;
+        existingErrors[photo.id] = fieldErrors;
+      }
+    });
+
+    // 新規写真のバリデーション
+    const newErrors: Record<
+      number,
+      { photoType?: string; title?: string; comment?: string; customerFeedback?: string }
+    > = {};
+
+    newPhotos.forEach((photo, index) => {
+      const result = photoFormSchema.safeParse(photo);
+      if (!result.success) {
+        hasError = true;
+        const fieldErrors: { photoType?: string; title?: string; comment?: string; customerFeedback?: string } = {};
+        result.error.issues.forEach((issue) => {
+          const field = issue.path[0] as string;
+          if (field === "photoType" || field === "title" || field === "comment" || field === "customerFeedback") {
+            fieldErrors[field] = issue.message;
+          }
+        });
+        newErrors[index] = fieldErrors;
       }
     });
 
     if (hasError) {
-      setErrors(newErrors);
+      setErrors(existingErrors);
+      setNewPhotoErrors(newErrors);
       toast.error("入力内容を確認してください");
       return;
     }
 
     startTransition(async () => {
       try {
+        // 既存写真の更新
         await updateReportPhotos(
           report.id,
           editData.map((photo) => ({
@@ -112,15 +168,26 @@ export const ReportDetailView = ({ report }: ReportDetailViewProps) => {
             customerFeedback: photo.customerFeedback,
           }))
         );
+
+        // 新規写真の追加
+        if (newPhotos.length > 0) {
+          await addPhotosToReport(report.id, newPhotos);
+        }
+
         toast.success("レポートを更新しました");
         setIsEditing(false);
         setErrors({});
+        setNewPhotoErrors({});
+        setNewPhotos([]);
         router.refresh();
       } catch {
         toast.error("更新に失敗しました");
       }
     });
   };
+
+  const remainingSlots = MAX_TOTAL_PHOTOS - editData.length - newPhotos.length;
+  const canAddMorePhotos = remainingSlots > 0;
 
   return (
     <div className="min-h-screen pb-20">
@@ -175,11 +242,11 @@ export const ReportDetailView = ({ report }: ReportDetailViewProps) => {
             {format(new Date(report.createdAt), "yyyy年M月d日 HH:mm", {
               locale: ja,
             })}
-            {" • "}写真 {report.photos.length}枚
+            {" • "}写真 {editData.length + newPhotos.length}枚
           </p>
         </div>
 
-        {/* 写真一覧 */}
+        {/* 既存写真一覧 */}
         <div className="space-y-4">
           {isEditing
             ? editData.map((photo, index) => (
@@ -188,7 +255,7 @@ export const ReportDetailView = ({ report }: ReportDetailViewProps) => {
                   data={photo}
                   onChange={(data) => handlePhotoChange(index, data)}
                   index={index}
-                  total={editData.length}
+                  total={editData.length + newPhotos.length}
                   errors={errors[photo.id]}
                 />
               ))
@@ -205,6 +272,41 @@ export const ReportDetailView = ({ report }: ReportDetailViewProps) => {
                 />
               ))}
         </div>
+
+        {/* 新規写真追加（編集モード時のみ） */}
+        {isEditing && (
+          <div className="space-y-4 pt-4 border-t">
+            <h3 className="font-medium">写真を追加</h3>
+
+            {/* 新規写真のプレビュー・詳細入力 */}
+            {newPhotos.map((photo, index) => (
+              <PhotoDetailCard
+                key={`new-${index}`}
+                index={editData.length + index}
+                total={editData.length + newPhotos.length}
+                data={photo}
+                onChange={(data) => handleNewPhotoChange(index, data)}
+                onRemove={() => handleNewPhotoRemove(index)}
+                errors={newPhotoErrors[index]}
+              />
+            ))}
+
+            {/* 写真アップローダー */}
+            {canAddMorePhotos && (
+              <PhotoUploader
+                photos={newPhotos}
+                onChange={handleNewPhotosChange}
+                maxPhotos={remainingSlots + newPhotos.length}
+              />
+            )}
+
+            {!canAddMorePhotos && (
+              <p className="text-sm text-muted-foreground text-center py-2">
+                写真は最大{MAX_TOTAL_PHOTOS}枚までです
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 固定フッター（編集モード時のみ） */}
