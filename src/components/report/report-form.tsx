@@ -138,7 +138,7 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 pb-24">
+    <form onSubmit={handleSubmit} className="space-y-6 pb-36">
       {/* ヘッダー */}
       <div className="flex items-center gap-3 p-4 border-b bg-background sticky top-0 z-10">
         <Button
@@ -236,8 +236,8 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
         )}
       </div>
 
-      {/* 送信ボタン（固定フッター） */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t">
+      {/* 送信ボタン（モバイルナビの上に配置） */}
+      <div className="fixed bottom-16 left-0 right-0 p-4 bg-background border-t z-40 md:bottom-0">
         <Button
           type="submit"
           className="w-full"
