@@ -18,6 +18,7 @@ import { PhotoDetailCard } from "./photo-detail-card";
 import { ProjectSelector } from "./project-selector";
 import { createReport } from "@/actions/reports";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import type { PhotoFormData, PhotoType } from "@/types";
 
 interface Project {
@@ -197,11 +198,11 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
               <Textarea
                 id="summary"
                 value={summary}
-                onChange={(e) => setSummary(e.target.value)}
+                onChange={(e) => handleSummaryChange(e.target.value)}
                 placeholder="例: 今日は〇〇邸で屋根の葺き替え作業を行いました。朝は少し雨が降っていましたが、午後から晴れて作業がスムーズに進みました。お客様がお茶を差し入れてくださり、とても嬉しかったです。材料の運搬時に少し道が狭かったですが、無事に完了しました。"
                 rows={5}
                 maxLength={2000}
-                className="resize-none"
+                className={cn("resize-none", errors.summary && "border-red-500 border-2")}
               />
               {errors.summary && (
                 <p className="text-sm text-red-500">{errors.summary}</p>
@@ -229,6 +230,7 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
                   data={photo}
                   onChange={(data) => handlePhotoChange(index, data)}
                   onRemove={() => handlePhotoRemove(index)}
+                  errors={errors.photoErrors?.[index]}
                 />
               ))}
             </div>
