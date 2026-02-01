@@ -5,8 +5,8 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "./auth";
-import { uploadPhoto } from "@/lib/supabase/storage";
+import { requireAuth, requireAdmin } from "./auth";
+import { uploadPhoto, deletePhoto } from "@/lib/supabase/storage";
 import { revalidatePath } from "next/cache";
 import type { PhotoType } from "@/types";
 import type { UpdatePhotoSchemaType } from "@/lib/validations/report";
@@ -398,6 +398,53 @@ export const updateReportSummary = async (
   revalidatePath("/");
   revalidatePath("/dashboard");
   revalidatePath(`/projects/${report.projectId}`);
+
+  return { success: true };
+};
+
+/**
+ * レポートを削除（管理者専用）
+ * レポートに紐づく写真もストレージから削除
+ */
+export const deleteReport = async (reportId: string) => {
+  await requireAdmin();
+
+  // レポートと写真を取得
+  const report = await prisma.report.findUnique({
+    where: { id: reportId },
+    include: {
+      photos: {
+        select: { photoUrl: true },
+      },
+    },
+  });
+
+  if (!report) {
+    throw new Error("レポートが見つかりません");
+  }
+
+  const projectId = report.projectId;
+
+  // ストレージから写真を削除
+  const deletePromises = report.photos.map(async (photo) => {
+    try {
+      await deletePhoto(photo.photoUrl);
+    } catch (error) {
+      console.error(`Failed to delete photo: ${photo.photoUrl}`, error);
+      // ストレージ削除に失敗してもDB削除は続行
+    }
+  });
+  await Promise.all(deletePromises);
+
+  // DBからレポートを削除（カスケードで写真も削除される）
+  await prisma.report.delete({
+    where: { id: reportId },
+  });
+
+  revalidatePath("/");
+  revalidatePath("/history");
+  revalidatePath("/dashboard");
+  revalidatePath(`/projects/${projectId}`);
 
   return { success: true };
 };
