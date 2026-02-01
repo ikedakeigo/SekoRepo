@@ -65,8 +65,13 @@ export const signup = async (formData: FormData) => {
     return { error: "すべての項目を入力してください" };
   }
 
-  if (password.length < 6) {
-    return { error: "パスワードは6文字以上で入力してください" };
+  // パスワードバリデーション（8文字以上、小文字・数字を含む）
+  const passwordRegex = /^(?=.*[a-z])(?=.*\d)[a-z\d]{8,}$/;
+  if (!passwordRegex.test(password)) {
+    return {
+      error:
+        "パスワードは8文字以上で、小文字・数字を含めてください",
+    };
   }
 
   // Supabase Authでユーザー作成
