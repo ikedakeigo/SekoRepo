@@ -8,6 +8,9 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { ArrowLeft, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -16,7 +19,7 @@ import { PhotoViewCard } from "./photo-view-card";
 import { PhotoEditCard } from "./photo-edit-card";
 import { PhotoUploader } from "@/components/report/photo-uploader";
 import { PhotoDetailCard } from "@/components/report/photo-detail-card";
-import { updateReportPhotos, addPhotosToReport } from "@/actions/reports";
+import { updateReportPhotos, addPhotosToReport, updateReportSummary } from "@/actions/reports";
 import { updatePhotoSchema, photoFormSchema } from "@/lib/validations/report";
 import type { ReportDetail, PhotoEditData, PhotoFormData } from "@/types";
 
@@ -44,6 +47,7 @@ export const ReportDetailView = ({ report }: ReportDetailViewProps) => {
     }))
   );
   const [newPhotos, setNewPhotos] = useState<PhotoFormData[]>([]);
+  const [editSummary, setEditSummary] = useState(report.summary || "");
   const [errors, setErrors] = useState<
     Record<string, { title?: string; comment?: string; customerFeedback?: string }>
   >({});
@@ -80,6 +84,7 @@ export const ReportDetailView = ({ report }: ReportDetailViewProps) => {
       }
     });
     setNewPhotos([]);
+    setEditSummary(report.summary || "");
     setIsEditing(false);
     setErrors({});
     setNewPhotoErrors({});
@@ -174,6 +179,11 @@ export const ReportDetailView = ({ report }: ReportDetailViewProps) => {
           await addPhotosToReport(report.id, newPhotos);
         }
 
+        // 全体コメントの更新（変更があった場合のみ）
+        if (editSummary !== (report.summary || "")) {
+          await updateReportSummary(report.id, editSummary);
+        }
+
         toast.success("レポートを更新しました");
         setIsEditing(false);
         setErrors({});
@@ -245,6 +255,41 @@ export const ReportDetailView = ({ report }: ReportDetailViewProps) => {
             {" • "}写真 {editData.length + newPhotos.length}枚
           </p>
         </div>
+
+        {/* 全体コメント */}
+        {isEditing ? (
+          <Card>
+            <CardContent className="p-4 space-y-2">
+              <Label htmlFor="edit-summary" className="font-medium">
+                今日の作業について
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                その日の作業内容、お客様の様子、現場での出来事など
+              </p>
+              <Textarea
+                id="edit-summary"
+                value={editSummary}
+                onChange={(e) => setEditSummary(e.target.value)}
+                placeholder="例: 今日は〇〇邸で屋根の葺き替え作業を行いました..."
+                rows={4}
+                maxLength={2000}
+                className="resize-none"
+              />
+              <p className="text-xs text-muted-foreground text-right">
+                {editSummary.length}/2000文字
+              </p>
+            </CardContent>
+          </Card>
+        ) : report.summary ? (
+          <Card>
+            <CardContent className="p-4 space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">
+                今日の作業について
+              </p>
+              <p className="text-sm whitespace-pre-wrap">{report.summary}</p>
+            </CardContent>
+          </Card>
+        ) : null}
 
         {/* 既存写真一覧 */}
         <div className="space-y-4">
