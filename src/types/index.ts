@@ -129,6 +129,7 @@ export interface ReportFormData {
   projectId: string;
   newProjectName?: string;
   newProjectLocation?: string;
+  summary?: string;
   photos: PhotoFormData[];
 }
 
@@ -154,6 +155,7 @@ export interface ReportDetail {
   projectId: string;
   projectName: string;
   projectLocation?: string | null;
+  summary?: string | null;
   createdAt: Date;
   updatedAt: Date;
   photos: {
