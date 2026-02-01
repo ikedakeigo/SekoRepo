@@ -261,3 +261,63 @@ export const updateReportPhotos = async (
 
   return { success: true };
 };
+
+/**
+ * レポートに写真を追加
+ */
+export const addPhotosToReport = async (
+  reportId: string,
+  photos: PhotoFormData[]
+) => {
+  const userId = await requireAuth();
+
+  // 所有権確認
+  const report = await prisma.report.findFirst({
+    where: { id: reportId, userId: userId },
+    include: {
+      _count: { select: { photos: true } },
+    },
+  });
+
+  if (!report) {
+    throw new Error("レポートが見つかりません");
+  }
+
+  // 現在の写真数を取得して、sortOrderを計算
+  const startSortOrder = report._count.photos;
+
+  // トランザクションで写真を追加
+  await prisma.$transaction(async (tx) => {
+    const photoPromises = photos.map(async (photo, index) => {
+      if (!photo.file) {
+        throw new Error("写真ファイルが必要です");
+      }
+
+      // Storage にアップロード
+      const photoUrl = await uploadPhoto(photo.file, reportId);
+
+      // DB にレコード作成
+      return tx.photo.create({
+        data: {
+          reportId: reportId,
+          photoUrl,
+          photoType: photo.photoType,
+          title: photo.title,
+          comment: photo.comment || null,
+          customerFeedback: photo.customerFeedback || null,
+          sortOrder: startSortOrder + index,
+        },
+      });
+    });
+
+    await Promise.all(photoPromises);
+  });
+
+  revalidatePath(`/history/${reportId}`);
+  revalidatePath("/history");
+  revalidatePath("/");
+  revalidatePath("/dashboard");
+  revalidatePath(`/projects/${report.projectId}`);
+
+  return { success: true };
+};
