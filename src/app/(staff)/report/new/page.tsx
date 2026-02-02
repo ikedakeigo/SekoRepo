@@ -3,12 +3,21 @@
  */
 
 import { getActiveProjects } from "@/actions/projects";
+import { getCurrentUser } from "@/actions/auth";
 import { ReportForm } from "@/components/report";
+import { redirect } from "next/navigation";
 
 const NewReportPage = async () => {
-  const projects = await getActiveProjects();
+  const [projects, user] = await Promise.all([
+    getActiveProjects(),
+    getCurrentUser(),
+  ]);
 
-  return <ReportForm projects={projects} />;
+  if (!user) {
+    redirect("/login");
+  }
+
+  return <ReportForm projects={projects} userId={user.id} />;
 };
 
 export default NewReportPage;
