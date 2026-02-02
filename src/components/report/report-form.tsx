@@ -16,10 +16,11 @@ import { Loader2, Send, ArrowLeft } from "lucide-react";
 import { PhotoUploader } from "./photo-uploader";
 import { PhotoDetailCard } from "./photo-detail-card";
 import { ProjectSelector } from "./project-selector";
-import { createReport } from "@/actions/reports";
+import { createReportWithUrls } from "@/actions/reports";
+import { uploadPhotosClient, deleteUploadedPhotosClient } from "@/lib/supabase/storage.client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import type { PhotoFormData, PhotoType } from "@/types";
+import type { PhotoFormData } from "@/types";
 
 interface Project {
   id: string;
@@ -29,18 +30,20 @@ interface Project {
 
 interface ReportFormProps {
   projects: Project[];
+  userId: string;
 }
 
 /**
  * レポートフォーム
  */
-export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
+export const ReportForm = ({ projects: initialProjects, userId }: ReportFormProps) => {
   const router = useRouter();
   const [projects, setProjects] = useState(initialProjects);
   const [projectId, setProjectId] = useState("");
   const [summary, setSummary] = useState("");
   const [photos, setPhotos] = useState<PhotoFormData[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string>("");
   const [errors, setErrors] = useState<{
     projectId?: string;
     summary?: string;
@@ -140,38 +143,54 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
     }
 
     setIsSubmitting(true);
+    let uploadedPhotoUrls: string[] = [];
 
     try {
-      // FormDataを作成（File オブジェクトの送信にはFormDataが必要）
-      const formData = new FormData();
-      formData.append("projectId", projectId);
-      formData.append("summary", summary.trim());
+      // 1. 写真をSupabase Storageに直接アップロード
+      const photoFiles = photos
+        .map((photo) => photo.file)
+        .filter((file): file is File => file !== undefined);
 
-      // 写真データをJSON化（ファイル以外のメタデータ）
-      const photosMetadata = photos.map((photo) => ({
+      setUploadProgress(`写真をアップロード中... (0/${photoFiles.length})`);
+
+      uploadedPhotoUrls = await uploadPhotosClient(
+        photoFiles,
+        userId,
+        (completed, total) => {
+          setUploadProgress(`写真をアップロード中... (${completed}/${total})`);
+        }
+      );
+
+      setUploadProgress("レポートを保存中...");
+
+      // 2. レポートを作成（URLのみ送信）
+      const photosWithUrls = photos.map((photo, index) => ({
+        photoUrl: uploadedPhotoUrls[index],
         photoType: photo.photoType,
         title: photo.title,
         comment: photo.comment,
         customerFeedback: photo.customerFeedback,
       }));
-      formData.append("photosMetadata", JSON.stringify(photosMetadata));
 
-      // 写真ファイルを追加
-      photos.forEach((photo, index) => {
-        if (photo.file) {
-          formData.append(`photo_${index}`, photo.file);
-        }
+      await createReportWithUrls({
+        projectId,
+        summary: summary.trim(),
+        photos: photosWithUrls,
       });
-
-      await createReport(formData);
 
       toast.success("レポートを送信しました");
       router.push("/?success=true");
-    } catch (error) {
-      console.error("Failed to submit report:", error);
+    } catch {
+      // エラー時はアップロード済みの写真を削除
+      if (uploadedPhotoUrls.length > 0) {
+        await deleteUploadedPhotosClient(uploadedPhotoUrls).catch(() => {
+          // 削除失敗は無視（ゴミが残るだけなので）
+        });
+      }
       toast.error("送信に失敗しました。もう一度お試しください。");
     } finally {
       setIsSubmitting(false);
+      setUploadProgress("");
     }
   };
 
@@ -286,7 +305,7 @@ export const ReportForm = ({ projects: initialProjects }: ReportFormProps) => {
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              送信中...
+              {uploadProgress || "送信中..."}
             </>
           ) : (
             <>
