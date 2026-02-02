@@ -19,6 +19,15 @@ interface PhotoMetadata {
   customerFeedback: string;
 }
 
+/** 写真データの型（URL付き） */
+interface PhotoWithUrl {
+  photoUrl: string;
+  photoType: string;
+  title: string;
+  comment: string;
+  customerFeedback: string;
+}
+
 /**
  * レポートを作成（写真アップロード含む）
  * FormDataを受け取り、ファイルとメタデータを処理
@@ -85,6 +94,54 @@ export const createReport = async (formData: FormData) => {
     await Promise.all(photoPromises);
 
     return newReport;
+  });
+
+  revalidatePath("/");
+  revalidatePath("/history");
+  revalidatePath("/dashboard");
+  revalidatePath(`/projects/${projectId}`);
+
+  return report;
+};
+
+/**
+ * レポートを作成（URLベース - クライアント直接アップロード用）
+ * 写真は事前にクライアントからSupabase Storageにアップロード済み
+ */
+export const createReportWithUrls = async (data: {
+  projectId: string;
+  summary: string;
+  photos: PhotoWithUrl[];
+}) => {
+  const userId = await requireAuth();
+
+  const { projectId, summary, photos } = data;
+
+  if (!projectId) {
+    throw new Error("案件IDが必要です");
+  }
+
+  if (photos.length === 0) {
+    throw new Error("写真が必要です");
+  }
+
+  // レポートと写真を作成
+  const report = await prisma.report.create({
+    data: {
+      projectId,
+      userId,
+      summary: summary || null,
+      photos: {
+        create: photos.map((photo, index) => ({
+          photoUrl: photo.photoUrl,
+          photoType: photo.photoType,
+          title: photo.title,
+          comment: photo.comment || null,
+          customerFeedback: photo.customerFeedback || null,
+          sortOrder: index,
+        })),
+      },
+    },
   });
 
   revalidatePath("/");
