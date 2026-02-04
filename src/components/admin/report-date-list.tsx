@@ -15,7 +15,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronRight, Camera, User, Download, MessageSquare, Check, Circle, Trash2 } from "lucide-react";
+import { ChevronRight, Camera, User, Download, MessageSquare, Check, Circle, Trash2, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { PHOTO_TYPE_LABELS } from "@/types";
@@ -270,7 +270,11 @@ export const ReportDateList = ({ projectId, reports, postedDates }: ReportDateLi
                               className="h-8 px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
                               disabled={deletingReportId === report.id || isPending}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              {deletingReportId === report.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>

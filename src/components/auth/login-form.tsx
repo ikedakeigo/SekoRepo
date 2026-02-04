@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/card";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FullScreenLoading } from "@/components/ui/full-screen-loading";
 
 interface FieldErrors {
   email?: string;
@@ -31,6 +32,7 @@ interface FieldErrors {
  */
 export const LoginForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [showPassword, setShowPassword] = useState(false);
@@ -95,6 +97,7 @@ export const LoginForm = () => {
     }
 
     setIsSubmitting(true);
+    setIsRedirecting(true);
 
     try {
       const formData = new FormData();
@@ -106,14 +109,29 @@ export const LoginForm = () => {
         setError(result.error);
         // パスワードフィールドにフォーカス
         passwordRef.current?.focus();
+        setIsSubmitting(false);
+        setIsRedirecting(false);
       }
-    } finally {
-      setIsSubmitting(false);
+      // 成功時はredirect()が呼ばれるのでここには到達しない
+    } catch (error) {
+      // Next.jsのredirectはエラーをthrowするため、それ以外のエラーのみ処理
+      const isRedirectError =
+        error instanceof Error &&
+        (error.message === "NEXT_REDIRECT" || error.message.includes("redirect"));
+      if (!isRedirectError) {
+        setError("エラーが発生しました。もう一度お試しください。");
+        setIsSubmitting(false);
+        setIsRedirecting(false);
+      }
     }
   };
 
   const inputErrorClass = (hasError: boolean) =>
     cn(hasError && "border-red-500 focus-visible:ring-red-500");
+
+  if (isRedirecting) {
+    return <FullScreenLoading message="ログイン中..." />;
+  }
 
   return (
     <Card>

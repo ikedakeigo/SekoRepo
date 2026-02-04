@@ -5,6 +5,7 @@
 
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { logout } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Settings, LogOut, User } from "lucide-react";
+import { FullScreenLoading } from "@/components/ui/full-screen-loading";
 import type { User as UserType } from "@/types";
 
 interface HeaderProps {
@@ -27,9 +29,16 @@ interface HeaderProps {
  * ヘッダー
  */
 export const Header = ({ user }: HeaderProps) => {
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const handleLogout = async () => {
+    setIsLoggingOut(true);
     await logout();
   };
+
+  if (isLoggingOut) {
+    return <FullScreenLoading message="ログアウト中..." />;
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

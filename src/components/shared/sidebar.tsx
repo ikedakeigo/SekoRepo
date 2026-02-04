@@ -5,6 +5,7 @@
 
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/actions/auth";
@@ -18,6 +19,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FullScreenLoading } from "@/components/ui/full-screen-loading";
 import type { User } from "@/types";
 
 /** ナビゲーションアイテム */
@@ -48,10 +50,16 @@ interface SidebarProps {
  */
 export const Sidebar = ({ user }: SidebarProps) => {
   const pathname = usePathname();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
+    setIsLoggingOut(true);
     await logout();
   };
+
+  if (isLoggingOut) {
+    return <FullScreenLoading message="ログアウト中..." />;
+  }
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r bg-background hidden md:block">
