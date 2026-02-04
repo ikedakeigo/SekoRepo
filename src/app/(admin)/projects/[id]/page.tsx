@@ -4,13 +4,13 @@
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProjectWithPhotos, updateProjectStatus, getProjectPostedDates } from "@/actions/projects";
-import { PhotoTimeline, ReportDateList } from "@/components/admin";
+import { getProjectWithPhotos, getProjectPostedDates } from "@/actions/projects";
+import { PhotoTimeline, ReportDateList, ProjectStatusToggle } from "@/components/admin";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, MapPin, Camera, Calendar, CheckCircle, RotateCcw } from "lucide-react";
+import { ArrowLeft, MapPin, Camera, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import type { ProjectStatus } from "@/types";
@@ -53,12 +53,6 @@ const ProjectDetailPage = async ({
 
   const status = project.status as ProjectStatus;
   const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.active;
-
-  const toggleStatus = async () => {
-    "use server";
-    const newStatus = status === "completed" ? "active" : "completed";
-    await updateProjectStatus(id, newStatus);
-  };
 
   return (
     <div className="space-y-6">
@@ -103,21 +97,9 @@ const ProjectDetailPage = async ({
           </div>
 
           {/* ステータス変更ボタン（トグル） */}
-          {status !== "posted" && (
-            <form action={toggleStatus} className="pt-4">
-              {status === "active" ? (
-                <Button type="submit" variant="outline" className="w-full">
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  施工完了にする
-                </Button>
-              ) : (
-                <Button type="submit" variant="outline" className="w-full">
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  進行中に戻す
-                </Button>
-              )}
-            </form>
-          )}
+          <div className="pt-4">
+            <ProjectStatusToggle projectId={id} currentStatus={status} />
+          </div>
         </CardContent>
       </Card>
 

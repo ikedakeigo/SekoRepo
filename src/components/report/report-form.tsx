@@ -6,6 +6,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Loader2, Send, ArrowLeft } from "lucide-react";
+import { FullScreenLoading } from "@/components/ui/full-screen-loading";
 import { PhotoUploader } from "./photo-uploader";
 import { PhotoDetailCard } from "./photo-detail-card";
 import { ProjectSelector } from "./project-selector";
@@ -142,7 +144,11 @@ export const ReportForm = ({ projects: initialProjects, userId }: ReportFormProp
       return;
     }
 
-    setIsSubmitting(true);
+    // flushSyncで同期的に状態更新し、即座にローディング画面を表示
+    flushSync(() => {
+      setIsSubmitting(true);
+    });
+
     let uploadedPhotoUrls: string[] = [];
 
     try {
@@ -178,8 +184,10 @@ export const ReportForm = ({ projects: initialProjects, userId }: ReportFormProp
         photos: photosWithUrls,
       });
 
+      setUploadProgress("完了しました。リダイレクト中...");
       toast.success("レポートを送信しました");
       router.push("/?success=true");
+      // 成功時はローディング状態を維持（画面遷移まで）
     } catch {
       // エラー時はアップロード済みの写真を削除
       if (uploadedPhotoUrls.length > 0) {
@@ -188,11 +196,14 @@ export const ReportForm = ({ projects: initialProjects, userId }: ReportFormProp
         });
       }
       toast.error("送信に失敗しました。もう一度お試しください。");
-    } finally {
       setIsSubmitting(false);
       setUploadProgress("");
     }
   };
+
+  if (isSubmitting) {
+    return <FullScreenLoading message={uploadProgress || "送信中..."} />;
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 pb-36">
