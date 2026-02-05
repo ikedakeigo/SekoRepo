@@ -6,13 +6,17 @@
 "use client";
 
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Trash2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PHOTO_TYPE_LABELS } from "@/types";
 import type { PhotoFormData, PhotoType } from "@/types";
@@ -39,7 +43,6 @@ const PHOTO_TYPES: PhotoType[] = ["before", "during", "after", "other"];
  */
 export const PhotoDetailCard = ({
   index,
-  total,
   data,
   onChange,
   onRemove,
@@ -55,115 +58,118 @@ export const PhotoDetailCard = ({
   const showCustomerFeedback = data.photoType === "after";
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">
-            {index + 1}枚目 / {total}枚
-          </span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="text-red-500 hover:text-red-600 hover:bg-red-50"
-            onClick={onRemove}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* サムネイル */}
-        <div className="relative w-20 h-20 rounded-lg overflow-hidden">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+      <div className="md:flex">
+        {/* プレビュー画像 */}
+        <div className="md:w-1/3 h-48 md:h-auto relative">
           <Image
             src={data.previewUrl}
             alt={`写真 ${index + 1}`}
             fill
             className="object-cover"
           />
-        </div>
-
-        {/* 種類選択 */}
-        <div className="space-y-2">
-          <Label>
-            種類 <span className="text-red-500">*</span>
-          </Label>
-          <RadioGroup
-            value={data.photoType}
-            onValueChange={(value) =>
-              handleChange("photoType", value as PhotoType)
-            }
-            className="grid grid-cols-2 gap-2"
+          {/* 削除ボタン */}
+          <button
+            type="button"
+            onClick={onRemove}
+            className="absolute top-2 left-2 bg-red-500 text-white size-8 rounded-full flex items-center justify-center hover:bg-red-600 shadow-md transition-colors"
           >
-            {PHOTO_TYPES.map((type) => (
-              <div key={type} className="flex items-center space-x-2">
-                <RadioGroupItem value={type} id={`${index}-${type}`} />
-                <Label
-                  htmlFor={`${index}-${type}`}
-                  className="text-sm font-normal cursor-pointer"
-                >
-                  {PHOTO_TYPE_LABELS[type]}
-                </Label>
-              </div>
-            ))}
-          </RadioGroup>
-          {errors?.photoType && (
-            <p className="text-sm text-red-500">{errors.photoType}</p>
-          )}
+            <X className="size-4" />
+          </button>
         </div>
 
-        {/* タイトル */}
-        <div className="space-y-2">
-          <Label htmlFor={`title-${index}`}>
-            何の写真？ <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            id={`title-${index}`}
-            value={data.title}
-            onChange={(e) => handleChange("title", e.target.value)}
-            placeholder="例: 大棟のズレ発見"
-            maxLength={200}
-            className={cn(errors?.title && "border-red-500 border-2")}
-          />
-          {errors?.title && (
-            <p className="text-sm text-red-500">{errors.title}</p>
-          )}
-        </div>
+        {/* フォームフィールド */}
+        <div className="p-6 md:w-2/3 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 種類 */}
+            <div className="space-y-1">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                種類
+              </Label>
+              <Select
+                value={data.photoType}
+                onValueChange={(value) =>
+                  handleChange("photoType", value as PhotoType)
+                }
+              >
+                <SelectTrigger className="w-full h-11 rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PHOTO_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {PHOTO_TYPE_LABELS[type]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors?.photoType && (
+                <p className="text-xs text-red-500">{errors.photoType}</p>
+              )}
+            </div>
 
-        {/* コメント */}
-        <div className="space-y-2">
-          <Label htmlFor={`comment-${index}`}>コメント</Label>
-          <Textarea
-            id={`comment-${index}`}
-            value={data.comment}
-            onChange={(e) => handleChange("comment", e.target.value)}
-            placeholder="任意で詳細を記入"
-            rows={2}
-            maxLength={1000}
-          />
-          {errors?.comment && (
-            <p className="text-sm text-red-500">{errors.comment}</p>
-          )}
-        </div>
+            {/* タイトル */}
+            <div className="space-y-1">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                タイトル <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                value={data.title}
+                onChange={(e) => handleChange("title", e.target.value)}
+                placeholder="例: 大棟のズレ発見"
+                maxLength={200}
+                className={cn(
+                  "w-full h-11 rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900",
+                  errors?.title && "border-red-500 border-2"
+                )}
+              />
+              {errors?.title && (
+                <p className="text-xs text-red-500">{errors.title}</p>
+              )}
+            </div>
+          </div>
 
-        {/* お客様の反応（アフターのみ） */}
-        {showCustomerFeedback && (
-          <div className="space-y-2">
-            <Label htmlFor={`feedback-${index}`}>お客様の反応</Label>
+          {/* コメント */}
+          <div className="space-y-1">
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              コメント
+            </Label>
             <Textarea
-              id={`feedback-${index}`}
-              value={data.customerFeedback}
-              onChange={(e) => handleChange("customerFeedback", e.target.value)}
-              placeholder="お客様からの声があれば記入"
+              value={data.comment}
+              onChange={(e) => handleChange("comment", e.target.value)}
+              placeholder="詳細や観察点を記入..."
               rows={2}
-              maxLength={500}
+              maxLength={1000}
+              className="w-full rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900"
             />
-            {errors?.customerFeedback && (
-              <p className="text-sm text-red-500">{errors.customerFeedback}</p>
+            {errors?.comment && (
+              <p className="text-xs text-red-500">{errors.comment}</p>
             )}
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          {/* お客様の反応（アフターのみ） */}
+          {showCustomerFeedback && (
+            <div className="space-y-1">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                お客様の反応
+              </Label>
+              <Textarea
+                value={data.customerFeedback}
+                onChange={(e) =>
+                  handleChange("customerFeedback", e.target.value)
+                }
+                placeholder="お客様からの声があれば記入"
+                rows={2}
+                maxLength={500}
+                className="w-full rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900"
+              />
+              {errors?.customerFeedback && (
+                <p className="text-xs text-red-500">{errors.customerFeedback}</p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };

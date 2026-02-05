@@ -5,21 +5,24 @@
 
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Loader2, Send, ArrowLeft } from "lucide-react";
+import { Loader2, Send, Building2, Camera, Info, ChevronRight } from "lucide-react";
 import { FullScreenLoading } from "@/components/ui/full-screen-loading";
 import { PhotoUploader } from "./photo-uploader";
 import { PhotoDetailCard } from "./photo-detail-card";
 import { ProjectSelector } from "./project-selector";
+import { StepIndicator } from "./step-indicator";
 import { createReportWithUrls } from "@/actions/reports";
-import { uploadPhotosClient, deleteUploadedPhotosClient } from "@/lib/supabase/storage.client";
+import {
+  uploadPhotosClient,
+  deleteUploadedPhotosClient,
+} from "@/lib/supabase/storage.client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { PhotoFormData } from "@/types";
@@ -38,7 +41,10 @@ interface ReportFormProps {
 /**
  * レポートフォーム
  */
-export const ReportForm = ({ projects: initialProjects, userId }: ReportFormProps) => {
+export const ReportForm = ({
+  projects: initialProjects,
+  userId,
+}: ReportFormProps) => {
   const router = useRouter();
   const [projects, setProjects] = useState(initialProjects);
   const [projectId, setProjectId] = useState("");
@@ -53,11 +59,35 @@ export const ReportForm = ({ projects: initialProjects, userId }: ReportFormProp
     photoErrors?: Record<number, { title?: string }>;
   }>({});
 
+  // ステップの状態を計算
+  const steps = useMemo(
+    () => [
+      {
+        number: 1,
+        label: "案件",
+        completed: !!projectId,
+        active: !projectId,
+      },
+      {
+        number: 2,
+        label: "アップロード",
+        completed: photos.length > 0,
+        active: !!projectId && photos.length === 0,
+      },
+      {
+        number: 3,
+        label: "確認",
+        completed: false,
+        active: photos.length > 0,
+      },
+    ],
+    [projectId, photos.length]
+  );
+
   const handleProjectCreated = useCallback((project: Project) => {
     setProjects((prev) => [project, ...prev]);
   }, []);
 
-  // 案件選択時にエラーをクリア
   const handleProjectChange = useCallback((value: string) => {
     setProjectId(value);
     if (value) {
@@ -65,7 +95,6 @@ export const ReportForm = ({ projects: initialProjects, userId }: ReportFormProp
     }
   }, []);
 
-  // 作業内容入力時にエラーをクリア
   const handleSummaryChange = useCallback((value: string) => {
     setSummary(value);
     if (value.trim()) {
@@ -76,7 +105,6 @@ export const ReportForm = ({ projects: initialProjects, userId }: ReportFormProp
   const handlePhotoChange = useCallback(
     (index: number, data: PhotoFormData) => {
       setPhotos((prev) => prev.map((p, i) => (i === index ? data : p)));
-      // タイトルが入力されたらそのエラーをクリア
       if (data.title.trim()) {
         setErrors((prev) => {
           const newPhotoErrors = { ...prev.photoErrors };
@@ -115,7 +143,6 @@ export const ReportForm = ({ projects: initialProjects, userId }: ReportFormProp
       newErrors.photos = "写真を1枚以上選択してください";
     }
 
-    // 各写真のバリデーション（タイトル必須）
     photos.forEach((photo, index) => {
       if (!photo.title.trim()) {
         photoErrors[index] = { title: "タイトルを入力してください" };
@@ -127,7 +154,6 @@ export const ReportForm = ({ projects: initialProjects, userId }: ReportFormProp
       newErrors.photoErrors = photoErrors;
     }
 
-    // 今日の作業について（必須）
     if (!summary.trim()) {
       newErrors.summary = "今日の作業についての入力は必須です";
     }
@@ -144,7 +170,6 @@ export const ReportForm = ({ projects: initialProjects, userId }: ReportFormProp
       return;
     }
 
-    // flushSyncで同期的に状態更新し、即座にローディング画面を表示
     flushSync(() => {
       setIsSubmitting(true);
     });
@@ -152,7 +177,6 @@ export const ReportForm = ({ projects: initialProjects, userId }: ReportFormProp
     let uploadedPhotoUrls: string[] = [];
 
     try {
-      // 1. 写真をSupabase Storageに直接アップロード
       const photoFiles = photos
         .map((photo) => photo.file)
         .filter((file): file is File => file !== undefined);
@@ -169,7 +193,6 @@ export const ReportForm = ({ projects: initialProjects, userId }: ReportFormProp
 
       setUploadProgress("レポートを保存中...");
 
-      // 2. レポートを作成（URLのみ送信）
       const photosWithUrls = photos.map((photo, index) => ({
         photoUrl: uploadedPhotoUrls[index],
         photoType: photo.photoType,
@@ -187,13 +210,9 @@ export const ReportForm = ({ projects: initialProjects, userId }: ReportFormProp
       setUploadProgress("完了しました。リダイレクト中...");
       toast.success("レポートを送信しました");
       router.push("/?success=true");
-      // 成功時はローディング状態を維持（画面遷移まで）
     } catch {
-      // エラー時はアップロード済みの写真を削除
       if (uploadedPhotoUrls.length > 0) {
-        await deleteUploadedPhotosClient(uploadedPhotoUrls).catch(() => {
-          // 削除失敗は無視（ゴミが残るだけなので）
-        });
+        await deleteUploadedPhotosClient(uploadedPhotoUrls).catch(() => {});
       }
       toast.error("送信に失敗しました。もう一度お試しください。");
       setIsSubmitting(false);
@@ -205,41 +224,40 @@ export const ReportForm = ({ projects: initialProjects, userId }: ReportFormProp
     return <FullScreenLoading message={uploadProgress || "送信中..."} />;
   }
 
+  const selectedProject = projects.find((p) => p.id === projectId);
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 pb-36">
+    <form onSubmit={handleSubmit} className="min-h-screen bg-background">
       {/* ヘッダー */}
-      <div className="flex items-center gap-3 p-4 border-b bg-background sticky top-0 z-10">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={() => router.back()}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <h1 className="text-lg font-semibold">レポート送信</h1>
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 sticky top-0 z-10">
+        <nav className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-2">
+          <Link href="/" className="hover:text-primary transition-colors">
+            ホーム
+          </Link>
+          <ChevronRight className="size-4" />
+          <span className="text-slate-900 dark:text-white">新規送信</span>
+        </nav>
+        <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+          新規レポート送信
+        </h1>
+        <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">
+          現場の写真と詳細を記録します
+        </p>
       </div>
 
-      <div className="px-4 space-y-6">
-        {/* STEP 1: 写真選択 */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">STEP 1: 写真を選択</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <PhotoUploader photos={photos} onChange={setPhotos} />
-            {errors.photos && (
-              <p className="text-sm text-red-500 mt-2">{errors.photos}</p>
-            )}
-          </CardContent>
-        </Card>
+      <div className="max-w-[800px] mx-auto w-full p-4 md:py-10">
+        {/* ステップインジケーター */}
+        <StepIndicator steps={steps} />
 
-        {/* STEP 2: 案件選択 */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">STEP 2: 案件を選択</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <div className="space-y-12 pb-48 md:pb-32">
+          {/* Step 1: 案件選択 */}
+          <section>
+            <div className="flex items-center gap-2 mb-6">
+              <Building2 className="size-5 text-primary" />
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white leading-none">
+                Step 1: 案件選択
+              </h2>
+            </div>
             <ProjectSelector
               projects={projects}
               value={projectId}
@@ -247,48 +265,42 @@ export const ReportForm = ({ projects: initialProjects, userId }: ReportFormProp
               onProjectCreated={handleProjectCreated}
               error={errors.projectId}
             />
-          </CardContent>
-        </Card>
+            {selectedProject && (
+              <div className="mt-2 p-3 bg-primary/10 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="size-2 rounded-full bg-green-500" />
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">
+                    選択中: {selectedProject.name}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setProjectId("")}
+                  className="text-primary text-sm font-bold hover:underline"
+                >
+                  変更
+                </button>
+              </div>
+            )}
+          </section>
 
-        {/* 全体コメント */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">
-              今日の作業について <span className="text-red-500">*</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor="summary" className="text-sm text-muted-foreground">
-                その日の作業内容、お客様の様子、現場での出来事など自由に記入してください
-              </Label>
-              <Textarea
-                id="summary"
-                value={summary}
-                onChange={(e) => handleSummaryChange(e.target.value)}
-                placeholder="例: 今日は〇〇邸で屋根の葺き替え作業を行いました。朝は少し雨が降っていましたが、午後から晴れて作業がスムーズに進みました。お客様がお茶を差し入れてくださり、とても嬉しかったです。材料の運搬時に少し道が狭かったですが、無事に完了しました。"
-                rows={5}
-                maxLength={2000}
-                className={cn("resize-none", errors.summary && "border-red-500 border-2")}
-              />
-              {errors.summary && (
-                <p className="text-sm text-red-500">{errors.summary}</p>
-              )}
-              <p className="text-xs text-muted-foreground text-right">
-                {summary.length}/2000文字
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* STEP 3: 写真の詳細 */}
-        {photos.length > 0 && (
-          <>
-            <Separator />
-            <div className="space-y-4">
-              <h2 className="text-base font-semibold px-1">
-                STEP 3: 各写真の詳細
+          {/* Step 2: 写真アップロード */}
+          <section>
+            <div className="flex items-center gap-2 mb-6">
+              <Camera className="size-5 text-primary" />
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white leading-none">
+                Step 2: 写真アップロード
               </h2>
+            </div>
+            <PhotoUploader photos={photos} onChange={setPhotos} />
+            {errors.photos && (
+              <p className="text-sm text-red-500 mt-2">{errors.photos}</p>
+            )}
+          </section>
+
+          {/* 写真詳細カード */}
+          {photos.length > 0 && (
+            <div className="space-y-6">
               {photos.map((photo, index) => (
                 <PhotoDetailCard
                   key={index}
@@ -301,30 +313,93 @@ export const ReportForm = ({ projects: initialProjects, userId }: ReportFormProp
                 />
               ))}
             </div>
-          </>
-        )}
+          )}
+
+          {/* 今日の作業について */}
+          <section>
+            <div className="space-y-2">
+              <Label
+                htmlFor="summary"
+                className="text-xl font-bold text-slate-900 dark:text-white"
+              >
+                今日の作業について <span className="text-red-500">*</span>
+              </Label>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                その日の作業内容、お客様の様子、現場での出来事など自由に記入してください
+              </p>
+              <Textarea
+                id="summary"
+                value={summary}
+                onChange={(e) => handleSummaryChange(e.target.value)}
+                placeholder="例: 今日は〇〇邸で屋根の葺き替え作業を行いました。朝は少し雨が降っていましたが、午後から晴れて作業がスムーズに進みました。"
+                rows={5}
+                maxLength={2000}
+                className={cn(
+                  "resize-none rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900",
+                  errors.summary && "border-red-500 border-2"
+                )}
+              />
+              {errors.summary && (
+                <p className="text-sm text-red-500">{errors.summary}</p>
+              )}
+              <p className="text-xs text-slate-400 text-right">
+                {summary.length}/2000文字
+              </p>
+            </div>
+          </section>
+
+          {/* サマリーノート */}
+          {photos.length > 0 && projectId && (
+            <section className="bg-primary/5 rounded-xl p-6 border border-primary/20">
+              <div className="flex items-start gap-3">
+                <Info className="size-5 text-primary mt-1" />
+                <div>
+                  <h3 className="font-bold text-slate-900 dark:text-white">
+                    レポートサマリー
+                  </h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                    {photos.length}枚の写真を
+                    <span className="font-semibold">
+                      {selectedProject?.name}
+                    </span>
+                    に送信します。写真のメタデータに基づいて自動的にタイムスタンプが付与されます。
+                  </p>
+                </div>
+              </div>
+            </section>
+          )}
+        </div>
       </div>
 
-      {/* 送信ボタン（モバイルナビの上に配置） */}
-      <div className="fixed bottom-16 left-0 right-0 p-4 bg-background border-t z-40 md:bottom-0">
-        <Button
-          type="submit"
-          className="w-full"
-          size="lg"
-          disabled={isSubmitting || photos.length === 0}
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              {uploadProgress || "送信中..."}
-            </>
-          ) : (
-            <>
-              <Send className="mr-2 h-5 w-5" />
-              送信する
-            </>
-          )}
-        </Button>
+      {/* 固定ボタンバー */}
+      <div className="fixed bottom-16 md:bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+        <div className="max-w-[800px] mx-auto flex gap-4">
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1 h-12 rounded-lg border-slate-200 dark:border-slate-700"
+            onClick={() => router.back()}
+          >
+            キャンセル
+          </Button>
+          <Button
+            type="submit"
+            className="flex-[2] h-12 rounded-lg bg-primary text-white font-bold flex items-center justify-center gap-2 hover:bg-primary/90 shadow-lg shadow-primary/25"
+            disabled={isSubmitting || photos.length === 0}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="size-5 animate-spin" />
+                {uploadProgress || "送信中..."}
+              </>
+            ) : (
+              <>
+                <Send className="size-5" />
+                送信する
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </form>
   );
