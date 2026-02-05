@@ -15,7 +15,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronRight, Camera, User, Download, MessageSquare, Check, Circle, Trash2, Loader2 } from "lucide-react";
+import { ChevronRight, Camera, User, Download, MessageSquare, Check, Circle, Trash2, Loader2, FileSpreadsheet } from "lucide-react";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { PHOTO_TYPE_LABELS } from "@/types";
@@ -23,6 +23,7 @@ import type { PhotoType } from "@/types";
 import { cn } from "@/lib/utils";
 import { toggleDatePostedStatus } from "@/actions/projects";
 import { deleteReport } from "@/actions/reports";
+import { exportProjectByDateToCSV } from "@/actions/export";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,6 +61,7 @@ interface Report {
 
 interface ReportDateListProps {
   projectId: string;
+  projectName: string;
   reports: Report[];
   postedDates: string[]; // YYYY-MM-DD形式の配列
 }
@@ -94,7 +96,7 @@ const groupReportsByDate = (reports: Report[]) => {
 /**
  * 日付別レポートリスト
  */
-export const ReportDateList = ({ projectId, reports, postedDates }: ReportDateListProps) => {
+export const ReportDateList = ({ projectId, projectName, reports, postedDates }: ReportDateListProps) => {
   const [openDates, setOpenDates] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
   const [localPostedDates, setLocalPostedDates] = useState<Set<string>>(
@@ -102,6 +104,7 @@ export const ReportDateList = ({ projectId, reports, postedDates }: ReportDateLi
   );
   const [deletingReportId, setDeletingReportId] = useState<string | null>(null);
   const [localReports, setLocalReports] = useState<Report[]>(reports);
+  const [downloadingDate, setDownloadingDate] = useState<string | null>(null);
 
   const groupedReports = groupReportsByDate(localReports);
 
@@ -174,6 +177,37 @@ export const ReportDateList = ({ projectId, reports, postedDates }: ReportDateLi
     });
   };
 
+  const handleDateCSVDownload = async (date: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDownloadingDate(date);
+
+    try {
+      const csvData = await exportProjectByDateToCSV(projectId, date);
+
+      const blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+
+      // ファイル名を生成（案件名_日付.csv）
+      const dateForFileName = date.replace(/-/g, "");
+      const fileName = `${projectName}_${dateForFileName}.csv`;
+      link.download = fileName;
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success("CSVファイルをダウンロードしました");
+    } catch (error) {
+      console.error("CSV download error:", error);
+      toast.error("ダウンロードに失敗しました");
+    } finally {
+      setDownloadingDate(null);
+    }
+  };
+
   if (localReports.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
@@ -213,29 +247,44 @@ export const ReportDateList = ({ projectId, reports, postedDates }: ReportDateLi
                     </button>
                   </CollapsibleTrigger>
 
-                  {/* 投稿済みボタン */}
-                  <Button
-                    variant={isPosted ? "default" : "outline"}
-                    size="sm"
-                    className={cn(
-                      "ml-2",
-                      isPosted && "bg-green-600 hover:bg-green-700"
-                    )}
-                    onClick={(e) => handleTogglePosted(date, e)}
-                    disabled={isPending}
-                  >
-                    {isPosted ? (
-                      <>
-                        <Check className="h-4 w-4 mr-1" />
-                        投稿済み
-                      </>
-                    ) : (
-                      <>
-                        <Circle className="h-4 w-4 mr-1" />
-                        未投稿
-                      </>
-                    )}
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {/* CSVダウンロードボタン */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => handleDateCSVDownload(date, e)}
+                      disabled={downloadingDate === date}
+                    >
+                      {downloadingDate === date ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <FileSpreadsheet className="h-4 w-4" />
+                      )}
+                    </Button>
+
+                    {/* 投稿済みボタン */}
+                    <Button
+                      variant={isPosted ? "default" : "outline"}
+                      size="sm"
+                      className={cn(
+                        isPosted && "bg-green-600 hover:bg-green-700"
+                      )}
+                      onClick={(e) => handleTogglePosted(date, e)}
+                      disabled={isPending}
+                    >
+                      {isPosted ? (
+                        <>
+                          <Check className="h-4 w-4 mr-1" />
+                          投稿済み
+                        </>
+                      ) : (
+                        <>
+                          <Circle className="h-4 w-4 mr-1" />
+                          未投稿
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
 

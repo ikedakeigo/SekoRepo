@@ -5,7 +5,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProjectWithPhotos, getProjectPostedDates } from "@/actions/projects";
-import { PhotoTimeline, ReportDateList, ProjectStatusToggle } from "@/components/admin";
+import { PhotoTimeline, ReportDateList, ProjectStatusToggle, CSVDownloadButton } from "@/components/admin";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -96,9 +96,10 @@ const ProjectDetailPage = async ({
             </div>
           </div>
 
-          {/* ステータス変更ボタン（トグル） */}
-          <div className="pt-4">
+          {/* ステータス変更ボタン（トグル）・CSVダウンロード */}
+          <div className="pt-4 flex gap-2">
             <ProjectStatusToggle projectId={id} currentStatus={status} />
+            <CSVDownloadButton projectId={project.id} projectName={project.name} />
           </div>
         </CardContent>
       </Card>
@@ -117,7 +118,7 @@ const ProjectDetailPage = async ({
           </CardHeader>
           <CardContent>
             <TabsContent value="by-date" className="mt-0">
-              <ReportDateList projectId={id} reports={project.reports} postedDates={postedDates} />
+              <ReportDateList projectId={id} projectName={project.name} reports={project.reports} postedDates={postedDates} />
             </TabsContent>
             <TabsContent value="timeline" className="mt-0">
               <PhotoTimeline photos={project.photos} />
