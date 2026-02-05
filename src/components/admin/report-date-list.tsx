@@ -1,40 +1,27 @@
 /**
  * 日付別レポートリストコンポーネント
- * 日付ごとにグループ化されたレポートを表示
+ * 日付ごとにグループ化されたレポートをグリッド表示
  */
 
 "use client";
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { ChevronRight, Camera, User, Download, MessageSquare, Check, Circle, Trash2, Loader2, FileSpreadsheet } from "lucide-react";
+  ChevronDown,
+  User,
+  Download,
+  Check,
+  Circle,
+  Loader2,
+} from "lucide-react";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
-import { PHOTO_TYPE_LABELS } from "@/types";
-import type { PhotoType } from "@/types";
 import { cn } from "@/lib/utils";
 import { toggleDatePostedStatus } from "@/actions/projects";
 import { deleteReport } from "@/actions/reports";
 import { exportProjectByDateToCSV } from "@/actions/export";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
 interface Photo {
@@ -63,7 +50,7 @@ interface ReportDateListProps {
   projectId: string;
   projectName: string;
   reports: Report[];
-  postedDates: string[]; // YYYY-MM-DD形式の配列
+  postedDates: string[];
 }
 
 /** 日付文字列でグループ化するためのキーを取得 */
@@ -83,7 +70,6 @@ const groupReportsByDate = (reports: Report[]) => {
     grouped[key].push(report);
   });
 
-  // 日付の降順でソート
   const sortedKeys = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
 
   return sortedKeys.map((key) => ({
@@ -96,8 +82,12 @@ const groupReportsByDate = (reports: Report[]) => {
 /**
  * 日付別レポートリスト
  */
-export const ReportDateList = ({ projectId, projectName, reports, postedDates }: ReportDateListProps) => {
-  const [openDates, setOpenDates] = useState<Set<string>>(new Set());
+export const ReportDateList = ({
+  projectId,
+  projectName,
+  reports,
+  postedDates,
+}: ReportDateListProps) => {
   const [isPending, startTransition] = useTransition();
   const [localPostedDates, setLocalPostedDates] = useState<Set<string>>(
     new Set(postedDates)
@@ -108,22 +98,9 @@ export const ReportDateList = ({ projectId, projectName, reports, postedDates }:
 
   const groupedReports = groupReportsByDate(localReports);
 
-  const toggleDate = (date: string) => {
-    setOpenDates((prev) => {
-      const next = new Set(prev);
-      if (next.has(date)) {
-        next.delete(date);
-      } else {
-        next.add(date);
-      }
-      return next;
-    });
-  };
-
   const handleTogglePosted = (date: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Collapsibleのトリガーを防ぐ
+    e.stopPropagation();
 
-    // 楽観的更新
     setLocalPostedDates((prev) => {
       const next = new Set(prev);
       if (next.has(date)) {
@@ -159,7 +136,6 @@ export const ReportDateList = ({ projectId, projectName, reports, postedDates }:
   const handleDeleteReport = async (reportId: string) => {
     setDeletingReportId(reportId);
 
-    // 楽観的更新：ローカルからレポートを削除
     setLocalReports((prev) => prev.filter((r) => r.id !== reportId));
 
     startTransition(async () => {
@@ -167,7 +143,6 @@ export const ReportDateList = ({ projectId, projectName, reports, postedDates }:
         await deleteReport(reportId);
         toast.success("レポートを削除しました");
       } catch (error) {
-        // 失敗した場合は元に戻す
         setLocalReports(reports);
         toast.error("削除に失敗しました");
         console.error("Delete failed:", error);
@@ -189,7 +164,6 @@ export const ReportDateList = ({ projectId, projectName, reports, postedDates }:
       const link = document.createElement("a");
       link.href = url;
 
-      // ファイル名を生成（案件名_日付.csv）
       const dateForFileName = date.replace(/-/g, "");
       const fileName = `${projectName}_${dateForFileName}.csv`;
       link.download = fileName;
@@ -210,220 +184,168 @@ export const ReportDateList = ({ projectId, projectName, reports, postedDates }:
 
   if (localReports.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
+      <div className="text-center py-12 text-slate-500 dark:text-slate-400">
         まだレポートがありません
       </div>
     );
   }
 
   return (
-    <div className="space-y-2">
-      {groupedReports.map(({ date, reports: dateReports, photoCount }) => {
-        const isOpen = openDates.has(date);
+    <div className="space-y-6">
+      {groupedReports.map(({ date, reports: dateReports, photoCount }, index) => {
         const isPosted = localPostedDates.has(date);
-        const displayDate = format(new Date(date), "M月d日（E）", { locale: ja });
+        const dateObj = new Date(date);
+        const isToday = getDateKey(new Date()) === date;
+        const displayDate = isToday
+          ? `本日、${format(dateObj, "M月d日", { locale: ja })}`
+          : format(dateObj, "M月d日（E）", { locale: ja });
 
         return (
-          <Collapsible key={date} open={isOpen} onOpenChange={() => toggleDate(date)}>
-            <Card className={cn(isPosted && "border-green-300 bg-green-50/50")}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <CollapsibleTrigger asChild>
-                    <button className="flex items-center gap-3 text-left flex-1">
-                      <ChevronRight
-                        className={cn(
-                          "h-5 w-5 text-muted-foreground transition-transform",
-                          isOpen && "rotate-90"
-                        )}
-                      />
-                      <span className="font-medium">{displayDate}</span>
-                      <Badge variant="secondary" className="font-normal">
-                        <Camera className="h-3 w-3 mr-1" />
-                        {photoCount}枚
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {dateReports.length}件
-                      </span>
-                    </button>
-                  </CollapsibleTrigger>
+          <div
+            key={date}
+            className={cn("space-y-4", index > 0 && "opacity-80 hover:opacity-100 transition-opacity")}
+          >
+            {/* 日付ヘッダー */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-none">
+                  {displayDate}
+                </h3>
+                <span className="text-xs font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                  {dateReports.length}件 / {photoCount}枚
+                </span>
+                {isPosted && (
+                  <span className="text-xs font-medium text-green-600 bg-green-100 dark:bg-green-900/30 px-2 py-0.5 rounded">
+                    投稿済み
+                  </span>
+                )}
+              </div>
 
-                  <div className="flex items-center gap-2">
-                    {/* CSVダウンロードボタン */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => handleDateCSVDownload(date, e)}
-                      disabled={downloadingDate === date}
-                    >
-                      {downloadingDate === date ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <FileSpreadsheet className="h-4 w-4" />
-                      )}
-                    </Button>
+              <div className="flex items-center gap-2">
+                {/* CSVダウンロードボタン */}
+                <button
+                  onClick={(e) => handleDateCSVDownload(date, e)}
+                  disabled={downloadingDate === date}
+                  className="text-primary text-sm font-bold flex items-center gap-1 hover:underline disabled:opacity-50"
+                >
+                  {downloadingDate === date ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Download className="size-4" />
+                  )}
+                  CSVダウンロード
+                </button>
 
-                    {/* 投稿済みボタン */}
-                    <Button
-                      variant={isPosted ? "default" : "outline"}
-                      size="sm"
-                      className={cn(
-                        isPosted && "bg-green-600 hover:bg-green-700"
-                      )}
-                      onClick={(e) => handleTogglePosted(date, e)}
-                      disabled={isPending}
-                    >
-                      {isPosted ? (
-                        <>
-                          <Check className="h-4 w-4 mr-1" />
-                          投稿済み
-                        </>
-                      ) : (
-                        <>
-                          <Circle className="h-4 w-4 mr-1" />
-                          未投稿
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
+                {/* 投稿済みトグル */}
+                <Button
+                  variant={isPosted ? "default" : "outline"}
+                  size="sm"
+                  className={cn(
+                    "ml-2",
+                    isPosted && "bg-green-600 hover:bg-green-700"
+                  )}
+                  onClick={(e) => handleTogglePosted(date, e)}
+                  disabled={isPending}
+                >
+                  {isPosted ? (
+                    <>
+                      <Check className="size-4 mr-1" />
+                      投稿済み
+                    </>
+                  ) : (
+                    <>
+                      <Circle className="size-4 mr-1" />
+                      未投稿
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
 
-              <CollapsibleContent>
-                <div className="px-4 pb-4 space-y-4">
-                  {dateReports.map((report) => (
-                    <div
-                      key={report.id}
-                      className="border rounded-lg p-4 space-y-3 bg-background"
-                    >
-                      {/* レポートヘッダー */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <User className="h-4 w-4" />
-                          <span>{report.user.name}</span>
-                          <span>•</span>
-                          <span>
-                            {format(new Date(report.createdAt), "HH:mm", {
-                              locale: ja,
-                            })}
-                          </span>
-                          <span>•</span>
-                          <span>{report.photos.length}枚</span>
-                        </div>
-
-                        {/* 削除ボタン */}
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
-                              disabled={deletingReportId === report.id || isPending}
-                            >
-                              {deletingReportId === report.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>レポートを削除</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                このレポートと{report.photos.length}枚の写真を削除します。
-                                この操作は取り消せません。
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>キャンセル</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDeleteReport(report.id)}
-                                className="bg-red-600 hover:bg-red-700"
-                              >
-                                削除する
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-
-                      {/* 全体コメント */}
-                      {report.summary && (
-                        <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
-                          <p className="text-xs text-blue-600 font-medium mb-1">
-                            今日の作業について
-                          </p>
-                          <p className="text-sm text-blue-900 whitespace-pre-wrap">
-                            {report.summary}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* 写真一覧 */}
-                      <div className="space-y-3">
-                        {report.photos.map((photo) => (
-                          <div
-                            key={photo.id}
-                            className="flex gap-3 p-3 bg-muted/50 rounded-lg"
-                          >
-                            {/* サムネイル */}
-                            <div className="relative w-20 h-20 rounded-lg overflow-hidden shrink-0">
-                              <Image
-                                src={photo.photoUrl}
-                                alt={photo.title}
-                                fill
-                                className="object-cover"
-                                unoptimized
-                              />
-                            </div>
-
-                            {/* 情報 */}
-                            <div className="flex-1 min-w-0 space-y-1">
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-xs">
-                                  {PHOTO_TYPE_LABELS[photo.photoType as PhotoType]}
-                                </Badge>
-                                <span className="font-medium text-sm truncate">
-                                  {photo.title}
-                                </span>
-                              </div>
-
-                              {photo.comment && (
-                                <p className="text-sm text-muted-foreground line-clamp-2">
-                                  {photo.comment}
-                                </p>
-                              )}
-
-                              {photo.customerFeedback && (
-                                <div className="flex items-start gap-1.5 text-xs">
-                                  <MessageSquare className="h-3 w-3 text-green-600 shrink-0 mt-0.5" />
-                                  <span className="text-green-700 line-clamp-1">
-                                    {photo.customerFeedback}
-                                  </span>
-                                </div>
-                              )}
-
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 px-2 text-xs"
-                                onClick={() => handleDownload(photo)}
-                              >
-                                <Download className="h-3 w-3 mr-1" />
-                                ダウンロード
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CollapsibleContent>
-            </Card>
-          </Collapsible>
+            {/* レポートカードグリッド */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {dateReports.flatMap((report) =>
+                report.photos.map((photo) => (
+                  <ReportCard
+                    key={photo.id}
+                    photo={photo}
+                    report={report}
+                    onDownload={() => handleDownload(photo)}
+                  />
+                ))
+              )}
+            </div>
+          </div>
         );
       })}
+
+      {/* 古いレポートを表示（将来実装） */}
+      {groupedReports.length > 3 && (
+        <div className="border-t border-slate-200 dark:border-slate-800 pt-6">
+          <button className="w-full flex items-center justify-between p-4 bg-slate-100 dark:bg-slate-800/50 rounded-lg group hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+            <div className="flex items-center gap-4">
+              <ChevronDown className="size-5 text-slate-400 group-hover:text-primary" />
+              <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                さらに古いレポートを表示
+              </span>
+            </div>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
+ * レポートカード
+ */
+interface ReportCardProps {
+  photo: Photo;
+  report: Report;
+  onDownload: () => void;
+}
+
+const ReportCard = ({
+  photo,
+  report,
+  onDownload,
+}: ReportCardProps) => {
+  const time = format(new Date(report.createdAt), "HH:mm");
+
+  return (
+    <div className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-md transition-shadow">
+      {/* 画像 */}
+      <div className="h-40 relative">
+        <Image
+          src={photo.photoUrl}
+          alt={photo.title}
+          fill
+          className="object-cover"
+          unoptimized
+        />
+        {/* 時刻バッジ */}
+        <div className="absolute top-2 right-2 bg-black/50 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm">
+          {time}
+        </div>
+        {/* ダウンロードボタン（ホバー時表示） */}
+        <button
+          onClick={onDownload}
+          className="absolute bottom-2 right-2 bg-white/90 dark:bg-slate-800/90 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white dark:hover:bg-slate-700"
+        >
+          <Download className="size-4 text-slate-600 dark:text-slate-300" />
+        </button>
+      </div>
+
+      {/* コンテンツ */}
+      <div className="p-3">
+        <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+          {photo.title}
+        </p>
+        <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+          <User className="size-3" />
+          {report.user.name}
+        </p>
+      </div>
     </div>
   );
 };
