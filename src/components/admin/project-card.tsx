@@ -3,12 +3,14 @@
  * 案件一覧に表示するカード
  */
 
+"use client";
+
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { MapPin, Camera, FileText } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import Image from "next/image";
+import { FileText, Calendar, MoreVertical } from "lucide-react";
+import { format } from "date-fns";
 import { ja } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import type { ProjectStatus } from "@/types";
 
 interface ProjectCardProps {
@@ -16,21 +18,35 @@ interface ProjectCardProps {
     id: string;
     name: string;
     location?: string | null;
+    description?: string | null;
     status: string;
     createdAt: Date;
     reportCount: number;
     photoCount: number;
+    thumbnailUrl?: string | null;
   };
 }
 
 /** ステータスのラベルと色 */
 const STATUS_CONFIG: Record<
   ProjectStatus,
-  { label: string; variant: "default" | "secondary" | "outline" }
+  { label: string; bgColor: string; textColor: string }
 > = {
-  active: { label: "進行中", variant: "default" },
-  completed: { label: "完了", variant: "secondary" },
-  posted: { label: "投稿済", variant: "outline" },
+  active: {
+    label: "進行中",
+    bgColor: "bg-green-500/90",
+    textColor: "text-white",
+  },
+  completed: {
+    label: "完了",
+    bgColor: "bg-slate-400 dark:bg-slate-600",
+    textColor: "text-white",
+  },
+  posted: {
+    label: "投稿済",
+    bgColor: "bg-blue-500/90",
+    textColor: "text-white",
+  },
 };
 
 /**
@@ -42,39 +58,108 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
 
   return (
     <Link href={`/projects/${project.id}`}>
-      <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-        <CardHeader className="pb-2">
-          <div className="flex items-start justify-between">
-            <CardTitle className="text-base">{project.name}</CardTitle>
-            <Badge variant={config.variant}>{config.label}</Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {project.location && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4" />
-              {project.location}
+      <div className="group bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+        {/* カバー画像 */}
+        <div className="h-40 relative overflow-hidden bg-slate-100 dark:bg-slate-700">
+          {project.thumbnailUrl ? (
+            <Image
+              src={project.thumbnailUrl}
+              alt={project.name}
+              fill
+              className="object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-500">
+              <FileText className="size-12" />
             </div>
           )}
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Camera className="h-4 w-4" />
-              {project.photoCount}枚
+          {/* ステータスバッジ */}
+          <div className="absolute top-3 right-3">
+            <span
+              className={cn(
+                "text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded",
+                config.bgColor,
+                config.textColor
+              )}
+            >
+              {config.label}
+            </span>
+          </div>
+        </div>
+
+        {/* コンテンツ */}
+        <div className="p-5">
+          <div className="flex justify-between items-start mb-2">
+            <h3 className="font-bold text-lg text-slate-900 dark:text-white line-clamp-1">
+              {project.name}
+            </h3>
+            <button
+              className="text-slate-400 hover:text-primary transition-colors"
+              onClick={(e) => e.preventDefault()}
+            >
+              <MoreVertical className="size-5" />
+            </button>
+          </div>
+
+          {(project.description || project.location) && (
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 line-clamp-2">
+              {project.description || project.location}
+            </p>
+          )}
+
+          {/* メタ情報 */}
+          <div className="flex items-center gap-4 border-t border-slate-100 dark:border-slate-700 pt-4 mt-4">
+            <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+              <FileText className="size-4" />
+              <span className="text-xs font-semibold">
+                {project.reportCount} レポート
+              </span>
             </div>
-            <div className="flex items-center gap-1">
-              <FileText className="h-4 w-4" />
-              {project.reportCount}件
+            <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+              <Calendar className="size-4" />
+              <span className="text-xs font-semibold">
+                {format(new Date(project.createdAt), "yyyy年M月", {
+                  locale: ja,
+                })}
+              </span>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            作成:{" "}
-            {formatDistanceToNow(new Date(project.createdAt), {
-              addSuffix: true,
-              locale: ja,
-            })}
-          </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </Link>
+  );
+};
+
+/**
+ * 新規案件追加カード
+ */
+export const AddProjectCard = ({ onClick }: { onClick?: () => void }) => {
+  return (
+    <button
+      onClick={onClick}
+      className="group bg-slate-50 dark:bg-slate-800/40 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center p-8 text-center hover:border-primary/50 transition-all cursor-pointer min-h-[280px]"
+    >
+      <div className="bg-primary/10 text-primary p-4 rounded-full mb-4 group-hover:scale-110 transition-transform">
+        <svg
+          className="size-8"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M12 4v16m8-8H4"
+          />
+        </svg>
+      </div>
+      <h3 className="font-bold text-slate-900 dark:text-white">
+        新規案件を開始
+      </h3>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+        新しい現場を登録してスタッフを割り当てます
+      </p>
+    </button>
   );
 };
