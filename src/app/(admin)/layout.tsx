@@ -23,10 +23,10 @@ const AdminLayout = async ({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Sidebar user={user} />
-      <main className="md:pl-64">
-        <div className="container py-6">{children}</div>
+      <main className="md:pl-64 bg-background min-h-screen">
+        <div className="py-6 px-8">{children}</div>
       </main>
     </div>
   );
