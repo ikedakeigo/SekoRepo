@@ -24,9 +24,9 @@ const StaffLayout = async ({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-16 md:pb-0">
+    <div className="relative flex min-h-screen w-full flex-col bg-background overflow-x-hidden max-w-[480px] mx-auto border-x border-slate-200 dark:border-slate-800 shadow-xl">
       <Header user={user} />
-      <main className="max-w-md mx-auto">{children}</main>
+      <main className="flex-1">{children}</main>
       <MobileNav />
     </div>
   );

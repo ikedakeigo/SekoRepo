@@ -7,8 +7,7 @@
 
 import { useRef, useCallback, useState } from "react";
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import { Camera, X, Plus, Loader2 } from "lucide-react";
+import { Upload, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { compressImages } from "@/lib/image-compression";
 import type { PhotoFormData, PhotoType } from "@/types";
@@ -42,16 +41,15 @@ export const PhotoUploader = ({
 }: PhotoUploaderProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isCompressing, setIsCompressing] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const handleFileChange = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = e.target.files;
+    async (files: FileList | null) => {
       if (!files) return;
 
       const remainingSlots = maxPhotos - photos.length;
       const filesToAdd = Array.from(files).slice(0, remainingSlots);
 
-      // 圧縮処理開始
       setIsCompressing(true);
       try {
         const compressedFiles = await compressImages(filesToAdd);
@@ -66,12 +64,37 @@ export const PhotoUploader = ({
         setIsCompressing(false);
       }
 
-      // inputをリセット
       if (inputRef.current) {
         inputRef.current.value = "";
       }
     },
     [photos, onChange, maxPhotos]
+  );
+
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      handleFileChange(e.target.files);
+    },
+    [handleFileChange]
+  );
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragOver(false);
+      handleFileChange(e.dataTransfer.files);
+    },
+    [handleFileChange]
   );
 
   const handleRemove = useCallback(
@@ -89,71 +112,70 @@ export const PhotoUploader = ({
   const canAddMore = photos.length < maxPhotos;
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium">
-          写真を選択 <span className="text-red-500">*</span>
-        </h3>
-        <span className="text-sm text-muted-foreground">
-          {photos.length}/{maxPhotos}枚
-        </span>
-      </div>
-
-      <div className="grid grid-cols-4 gap-2">
-        {photos.map((photo, index) => (
-          <div key={index} className="relative aspect-square">
-            <Image
-              src={photo.previewUrl}
-              alt={`写真 ${index + 1}`}
-              fill
-              className="object-cover rounded-lg"
-            />
-            <button
-              type="button"
-              onClick={() => handleRemove(index)}
-              className="absolute -top-1 -right-1 p-1 bg-red-500 text-white rounded-full shadow-sm hover:bg-red-600 transition-colors"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </div>
-        ))}
-
-        {canAddMore && (
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            className={cn(
-              "aspect-square rounded-lg border-2 border-dashed",
-              "flex flex-col items-center justify-center gap-1",
-              "text-muted-foreground hover:text-foreground hover:border-foreground",
-              "transition-colors"
-            )}
-          >
-            <Plus className="h-6 w-6" />
-            <span className="text-xs">追加</span>
-          </button>
+    <div className="space-y-4">
+      {/* ドロップゾーン */}
+      <div
+        onClick={() => canAddMore && inputRef.current?.click()}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={cn(
+          "border-2 border-dashed rounded-xl p-8 text-center bg-white/50 dark:bg-slate-900/50 transition-colors cursor-pointer group",
+          isDragOver
+            ? "border-primary bg-primary/5"
+            : "border-slate-300 dark:border-slate-700 hover:border-primary",
+          !canAddMore && "opacity-50 cursor-not-allowed"
         )}
+      >
+        <div
+          className={cn(
+            "size-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors",
+            "group-hover:bg-primary/10 group-hover:text-primary"
+          )}
+        >
+          {isCompressing ? (
+            <Loader2 className="size-8 animate-spin" />
+          ) : (
+            <Upload className="size-8" />
+          )}
+        </div>
+        <p className="text-lg font-bold text-slate-900 dark:text-white">
+          {isCompressing
+            ? "画像を圧縮中..."
+            : "クリックしてアップロード、またはドラッグ＆ドロップ"}
+        </p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          高解像度のJPGまたはPNG（最大10MBまで）
+        </p>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+          {photos.length}/{maxPhotos}枚選択中
+        </p>
       </div>
 
-      {isCompressing && (
-        <div className="flex items-center justify-center gap-2 py-4 text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span className="text-sm">画像を圧縮中...</span>
+      {/* 選択済み写真のプレビュー */}
+      {photos.length > 0 && (
+        <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
+          {photos.map((photo, index) => (
+            <div key={index} className="relative aspect-square">
+              <Image
+                src={photo.previewUrl}
+                alt={`写真 ${index + 1}`}
+                fill
+                className="object-cover rounded-lg"
+              />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemove(index);
+                }}
+                className="absolute -top-1 -right-1 p-1 bg-red-500 text-white rounded-full shadow-sm hover:bg-red-600 transition-colors"
+              >
+                <X className="size-3" />
+              </button>
+            </div>
+          ))}
         </div>
-      )}
-
-      {photos.length === 0 && !isCompressing && (
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full h-32"
-          onClick={() => inputRef.current?.click()}
-        >
-          <div className="flex flex-col items-center gap-2">
-            <Camera className="h-8 w-8" />
-            <span>写真を選択</span>
-          </div>
-        </Button>
       )}
 
       <input
@@ -161,13 +183,9 @@ export const PhotoUploader = ({
         type="file"
         accept="image/jpeg,image/png,image/webp"
         multiple
-        onChange={handleFileChange}
+        onChange={handleInputChange}
         className="hidden"
       />
-
-      <p className="text-xs text-muted-foreground">
-        JPEG, PNG, WebP形式 / 最大{maxPhotos}枚（自動圧縮）
-      </p>
     </div>
   );
 };

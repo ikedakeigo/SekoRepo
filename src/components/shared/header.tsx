@@ -7,6 +7,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { logout } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,17 +42,26 @@ export const Header = ({ user }: HeaderProps) => {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center justify-between">
-        <Link href="/" className="flex items-center space-x-2">
-          <span className="text-xl font-bold">SekoRepo</span>
+    <header className="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 py-4">
+      <div className="flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-2">
+          <Image
+            src="/icons/icon-192x192.png"
+            alt="SekoRepo"
+            width={32}
+            height={32}
+            className="rounded-lg"
+          />
+          <h2 className="text-slate-900 dark:text-white text-xl font-bold leading-tight tracking-tight">
+            SekoRepo
+          </h2>
         </Link>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback>
+            <Button variant="ghost" className="relative size-10 rounded-full p-0">
+              <Avatar className="size-10 border-2 border-primary/20">
+                <AvatarFallback className="bg-slate-200 dark:bg-slate-700">
                   {user.name.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
@@ -69,13 +79,13 @@ export const Header = ({ user }: HeaderProps) => {
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link href="/settings" className="cursor-pointer">
-                <User className="mr-2 h-4 w-4" />
+                <User className="mr-2 size-4" />
                 プロフィール
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/settings" className="cursor-pointer">
-                <Settings className="mr-2 h-4 w-4" />
+                <Settings className="mr-2 size-4" />
                 設定
               </Link>
             </DropdownMenuItem>
@@ -84,7 +94,7 @@ export const Header = ({ user }: HeaderProps) => {
               className="cursor-pointer text-red-600"
               onClick={handleLogout}
             >
-              <LogOut className="mr-2 h-4 w-4" />
+              <LogOut className="mr-2 size-4" />
               ログアウト
             </DropdownMenuItem>
           </DropdownMenuContent>
