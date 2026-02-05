@@ -7,7 +7,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Camera, History } from "lucide-react";
+import { Home, Send, History, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** ナビゲーションアイテム */
@@ -20,12 +20,17 @@ const navItems = [
   {
     href: "/report/new",
     label: "送信",
-    icon: Camera,
+    icon: Send,
   },
   {
     href: "/history",
     label: "履歴",
     icon: History,
+  },
+  {
+    href: "/settings",
+    label: "設定",
+    icon: Settings,
   },
 ];
 
@@ -36,8 +41,8 @@ export const MobileNav = () => {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background md:hidden">
-      <div className="flex h-16 items-center justify-around">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 py-3 md:hidden">
+      <div className="flex items-center justify-between">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
@@ -47,14 +52,19 @@ export const MobileNav = () => {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 px-3 py-2 text-sm transition-colors",
+                "flex flex-col items-center gap-1 transition-colors",
                 isActive
                   ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
+                  : "text-slate-400 dark:text-slate-500 hover:text-primary"
               )}
             >
-              <Icon className="h-5 w-5" />
-              <span className="text-xs">{item.label}</span>
+              <Icon className={cn("size-6", isActive && "stroke-[2.5]")} />
+              <span className={cn(
+                "text-xs",
+                isActive ? "font-bold" : "font-medium"
+              )}>
+                {item.label}
+              </span>
             </Link>
           );
         })}
