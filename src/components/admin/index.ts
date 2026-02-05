@@ -3,7 +3,8 @@
  */
 
 export { StatsCards } from "./stats-cards";
-export { ProjectCard } from "./project-card";
+export { ProjectCard, AddProjectCard } from "./project-card";
+export { ProjectsHeader } from "./projects-header";
 export { PhotoCard } from "./photo-card";
 export { PhotoTimeline } from "./photo-timeline";
 export { ReportDateList } from "./report-date-list";
