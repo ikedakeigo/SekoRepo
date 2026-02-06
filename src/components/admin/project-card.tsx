@@ -6,8 +6,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { FileText, Calendar, MoreVertical } from "lucide-react";
+import { LazyImage } from "@/components/shared";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -62,7 +62,7 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
         {/* カバー画像 */}
         <div className="h-40 relative overflow-hidden bg-slate-100 dark:bg-slate-700">
           {project.thumbnailUrl ? (
-            <Image
+            <LazyImage
               src={project.thumbnailUrl}
               alt={project.name}
               fill

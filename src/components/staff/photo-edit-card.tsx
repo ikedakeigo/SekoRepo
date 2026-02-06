@@ -8,8 +8,8 @@
 
 "use client";
 
-import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
+import { LazyImage } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,15 +60,13 @@ export const PhotoEditCard = ({
         </div>
 
         {/* サムネイル */}
-        <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-muted">
-          <Image
-            src={data.photoUrl}
-            alt={data.title || `写真 ${index + 1}`}
-            fill
-            className="object-cover"
-            unoptimized
-          />
-        </div>
+        <LazyImage
+          src={data.photoUrl}
+          alt={data.title || `写真 ${index + 1}`}
+          fill
+          className="object-cover"
+          containerClassName="w-20 h-20 rounded-lg overflow-hidden bg-muted"
+        />
 
         {/* タイトル */}
         <div className="space-y-2">

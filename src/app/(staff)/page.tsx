@@ -3,7 +3,7 @@
  */
 
 import Link from "next/link";
-import Image from "next/image";
+import { LazyImage } from "@/components/shared";
 import { getCurrentUser } from "@/actions/auth";
 import { getUserReports } from "@/actions/reports";
 import { Camera, ChevronRight, Clock } from "lucide-react";
@@ -24,15 +24,13 @@ const HomePage = async () => {
         <div className="flex w-full flex-col gap-4">
           <div className="flex items-center gap-4">
             {latestProject?.thumbnailUrl ? (
-              <div className="relative min-h-20 w-20 rounded-xl overflow-hidden shadow-sm">
-                <Image
-                  src={latestProject.thumbnailUrl}
-                  alt="現場写真"
-                  fill
-                  unoptimized
-                  className="object-cover"
-                />
-              </div>
+              <LazyImage
+                src={latestProject.thumbnailUrl}
+                alt="現場写真"
+                fill
+                className="object-cover"
+                containerClassName="min-h-20 w-20 rounded-xl overflow-hidden shadow-sm"
+              />
             ) : (
               <div className="min-h-20 w-20 rounded-xl bg-slate-200 dark:bg-slate-700 shadow-sm" />
             )}
@@ -83,15 +81,13 @@ const HomePage = async () => {
                 className="flex items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 hover:shadow-md transition-shadow"
               >
                 {report.thumbnailUrl ? (
-                  <div className="relative h-16 w-16 rounded-lg overflow-hidden flex-shrink-0">
-                    <Image
-                      src={report.thumbnailUrl}
-                      alt={report.projectName}
-                      fill
-                      unoptimized
-                      className="object-cover"
-                    />
-                  </div>
+                  <LazyImage
+                    src={report.thumbnailUrl}
+                    alt={report.projectName}
+                    fill
+                    className="object-cover"
+                    containerClassName="h-16 w-16 rounded-lg overflow-hidden flex-shrink-0"
+                  />
                 ) : (
                   <div className="h-16 w-16 rounded-lg bg-slate-200 dark:bg-slate-700 flex-shrink-0" />
                 )}

@@ -6,23 +6,19 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Loader2, Send, Building2, Camera, Info, ChevronRight } from "lucide-react";
-import { FullScreenLoading } from "@/components/ui/full-screen-loading";
 import { PhotoUploader } from "./photo-uploader";
 import { PhotoDetailCard } from "./photo-detail-card";
+import { PhotoUploadProgress } from "./photo-upload-progress";
 import { ProjectSelector } from "./project-selector";
 import { StepIndicator } from "./step-indicator";
 import { createReportWithUrls } from "@/actions/reports";
-import {
-  uploadPhotosClient,
-  deleteUploadedPhotosClient,
-} from "@/lib/supabase/storage.client";
+import { usePhotoUpload } from "@/hooks/use-photo-upload";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { PhotoFormData } from "@/types";
@@ -49,15 +45,26 @@ export const ReportForm = ({
   const [projects, setProjects] = useState(initialProjects);
   const [projectId, setProjectId] = useState("");
   const [summary, setSummary] = useState("");
-  const [photos, setPhotos] = useState<PhotoFormData[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<string>("");
   const [errors, setErrors] = useState<{
     projectId?: string;
     summary?: string;
     photos?: string;
     photoErrors?: Record<number, { title?: string }>;
   }>({});
+
+  // 写真アップロード管理フック
+  const {
+    items: photoItems,
+    addPhotos,
+    removePhoto,
+    updatePhotoData,
+    uploadAll,
+    overallProgress,
+    isCompressing,
+    isUploading,
+    cleanupUploadedPhotos,
+  } = usePhotoUpload();
 
   // ステップの状態を計算
   const steps = useMemo(
@@ -71,17 +78,17 @@ export const ReportForm = ({
       {
         number: 2,
         label: "アップロード",
-        completed: photos.length > 0,
-        active: !!projectId && photos.length === 0,
+        completed: photoItems.length > 0,
+        active: !!projectId && photoItems.length === 0,
       },
       {
         number: 3,
         label: "確認",
         completed: false,
-        active: photos.length > 0,
+        active: photoItems.length > 0,
       },
     ],
-    [projectId, photos.length]
+    [projectId, photoItems.length]
   );
 
   const handleProjectCreated = useCallback((project: Project) => {
@@ -103,8 +110,14 @@ export const ReportForm = ({
   }, []);
 
   const handlePhotoChange = useCallback(
-    (index: number, data: PhotoFormData) => {
-      setPhotos((prev) => prev.map((p, i) => (i === index ? data : p)));
+    (itemId: string, index: number, data: PhotoFormData) => {
+      updatePhotoData(itemId, {
+        photoType: data.photoType,
+        title: data.title,
+        comment: data.comment,
+        customerFeedback: data.customerFeedback,
+      });
+
       if (data.title.trim()) {
         setErrors((prev) => {
           const newPhotoErrors = { ...prev.photoErrors };
@@ -118,18 +131,15 @@ export const ReportForm = ({
         });
       }
     },
-    []
+    [updatePhotoData]
   );
 
-  const handlePhotoRemove = useCallback((index: number) => {
-    setPhotos((prev) => {
-      const photoToRemove = prev[index];
-      if (photoToRemove.previewUrl) {
-        URL.revokeObjectURL(photoToRemove.previewUrl);
-      }
-      return prev.filter((_, i) => i !== index);
-    });
-  }, []);
+  const handlePhotoRemove = useCallback(
+    (itemId: string) => {
+      removePhoto(itemId);
+    },
+    [removePhoto]
+  );
 
   const validate = (): boolean => {
     const newErrors: typeof errors = {};
@@ -139,12 +149,12 @@ export const ReportForm = ({
       newErrors.projectId = "案件を選択してください";
     }
 
-    if (photos.length === 0) {
+    if (photoItems.length === 0) {
       newErrors.photos = "写真を1枚以上選択してください";
     }
 
-    photos.forEach((photo, index) => {
-      if (!photo.title.trim()) {
+    photoItems.forEach((item, index) => {
+      if (!item.title.trim()) {
         photoErrors[index] = { title: "タイトルを入力してください" };
       }
     });
@@ -170,35 +180,29 @@ export const ReportForm = ({
       return;
     }
 
-    flushSync(() => {
-      setIsSubmitting(true);
-    });
-
-    let uploadedPhotoUrls: string[] = [];
+    setIsSubmitting(true);
 
     try {
-      const photoFiles = photos
-        .map((photo) => photo.file)
-        .filter((file): file is File => file !== undefined);
+      // XHRアップロード（個別進捗追跡付き）
+      const uploadedItems = await uploadAll(userId);
 
-      setUploadProgress(`写真をアップロード中... (0/${photoFiles.length})`);
-
-      uploadedPhotoUrls = await uploadPhotosClient(
-        photoFiles,
-        userId,
-        (completed, total) => {
-          setUploadProgress(`写真をアップロード中... (${completed}/${total})`);
-        }
+      // エラーがあるか確認
+      const errorItems = uploadedItems.filter(
+        (item) => item.uploadStatus === "error"
       );
+      if (errorItems.length > 0) {
+        throw new Error(
+          `${errorItems.length}枚の写真のアップロードに失敗しました`
+        );
+      }
 
-      setUploadProgress("レポートを保存中...");
-
-      const photosWithUrls = photos.map((photo, index) => ({
-        photoUrl: uploadedPhotoUrls[index],
-        photoType: photo.photoType,
-        title: photo.title,
-        comment: photo.comment,
-        customerFeedback: photo.customerFeedback,
+      // DB保存
+      const photosWithUrls = uploadedItems.map((item) => ({
+        photoUrl: item.uploadedUrl!,
+        photoType: item.photoType,
+        title: item.title,
+        comment: item.comment,
+        customerFeedback: item.customerFeedback,
       }));
 
       await createReportWithUrls({
@@ -207,24 +211,17 @@ export const ReportForm = ({
         photos: photosWithUrls,
       });
 
-      setUploadProgress("完了しました。リダイレクト中...");
       toast.success("レポートを送信しました");
       router.push("/?success=true");
     } catch {
-      if (uploadedPhotoUrls.length > 0) {
-        await deleteUploadedPhotosClient(uploadedPhotoUrls).catch(() => {});
-      }
+      await cleanupUploadedPhotos();
       toast.error("送信に失敗しました。もう一度お試しください。");
       setIsSubmitting(false);
-      setUploadProgress("");
     }
   };
 
-  if (isSubmitting) {
-    return <FullScreenLoading message={uploadProgress || "送信中..."} />;
-  }
-
   const selectedProject = projects.find((p) => p.id === projectId);
+  const isFormDisabled = isSubmitting || isUploading;
 
   return (
     <form onSubmit={handleSubmit} className="min-h-screen bg-background">
@@ -277,6 +274,7 @@ export const ReportForm = ({
                   type="button"
                   onClick={() => setProjectId("")}
                   className="text-primary text-sm font-bold hover:underline"
+                  disabled={isFormDisabled}
                 >
                   変更
                 </button>
@@ -292,23 +290,41 @@ export const ReportForm = ({
                 Step 2: 写真アップロード
               </h2>
             </div>
-            <PhotoUploader photos={photos} onChange={setPhotos} />
+            {!isSubmitting ? (
+              <PhotoUploader
+                onFilesAdded={addPhotos}
+                uploadItems={photoItems}
+                onRemoveUploadItem={removePhoto}
+              />
+            ) : (
+              <PhotoUploadProgress
+                items={photoItems}
+                overallProgress={overallProgress}
+              />
+            )}
             {errors.photos && (
               <p className="text-sm text-red-500 mt-2">{errors.photos}</p>
             )}
           </section>
 
           {/* 写真詳細カード */}
-          {photos.length > 0 && (
+          {photoItems.length > 0 && !isSubmitting && (
             <div className="space-y-6">
-              {photos.map((photo, index) => (
+              {photoItems.map((item, index) => (
                 <PhotoDetailCard
-                  key={index}
+                  key={item.id}
                   index={index}
-                  total={photos.length}
-                  data={photo}
-                  onChange={(data) => handlePhotoChange(index, data)}
-                  onRemove={() => handlePhotoRemove(index)}
+                  total={photoItems.length}
+                  data={{
+                    file: item.file,
+                    previewUrl: item.previewUrl || item.thumbnailUrl,
+                    photoType: item.photoType,
+                    title: item.title,
+                    comment: item.comment,
+                    customerFeedback: item.customerFeedback,
+                  }}
+                  onChange={(data) => handlePhotoChange(item.id, index, data)}
+                  onRemove={() => handlePhotoRemove(item.id)}
                   errors={errors.photoErrors?.[index]}
                 />
               ))}
@@ -334,6 +350,7 @@ export const ReportForm = ({
                 placeholder="例: 今日は〇〇邸で屋根の葺き替え作業を行いました。朝は少し雨が降っていましたが、午後から晴れて作業がスムーズに進みました。"
                 rows={5}
                 maxLength={2000}
+                disabled={isFormDisabled}
                 className={cn(
                   "resize-none rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900",
                   errors.summary && "border-red-500 border-2"
@@ -349,7 +366,7 @@ export const ReportForm = ({
           </section>
 
           {/* サマリーノート */}
-          {photos.length > 0 && projectId && (
+          {photoItems.length > 0 && projectId && (
             <section className="bg-primary/5 rounded-xl p-6 border border-primary/20">
               <div className="flex items-start gap-3">
                 <Info className="size-5 text-primary mt-1" />
@@ -358,7 +375,7 @@ export const ReportForm = ({
                     レポートサマリー
                   </h3>
                   <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                    {photos.length}枚の写真を
+                    {photoItems.length}枚の写真を
                     <span className="font-semibold">
                       {selectedProject?.name}
                     </span>
@@ -379,18 +396,21 @@ export const ReportForm = ({
             variant="outline"
             className="flex-1 h-12 rounded-lg border-slate-200 dark:border-slate-700"
             onClick={() => router.back()}
+            disabled={isFormDisabled}
           >
             キャンセル
           </Button>
           <Button
             type="submit"
             className="flex-[2] h-12 rounded-lg bg-primary text-white font-bold flex items-center justify-center gap-2 hover:bg-primary/90 shadow-lg shadow-primary/25"
-            disabled={isSubmitting || photos.length === 0}
+            disabled={isFormDisabled || photoItems.length === 0 || isCompressing}
           >
             {isSubmitting ? (
               <>
                 <Loader2 className="size-5 animate-spin" />
-                {uploadProgress || "送信中..."}
+                {isUploading
+                  ? `アップロード中... ${overallProgress}%`
+                  : "レポートを保存中..."}
               </>
             ) : (
               <>
