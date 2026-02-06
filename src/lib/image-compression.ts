@@ -27,7 +27,42 @@ export async function compressImage(file: File): Promise<File> {
   }
 }
 
-export async function compressImages(files: File[]): Promise<File[]> {
-  const compressedFiles = await Promise.all(files.map(compressImage));
+export async function compressImages(
+  files: File[],
+  onProgress?: (completed: number, total: number) => void
+): Promise<File[]> {
+  const total = files.length;
+  let completed = 0;
+
+  const compressedFiles = await Promise.all(
+    files.map(async (file) => {
+      const result = await compressImage(file);
+      completed++;
+      onProgress?.(completed, total);
+      return result;
+    })
+  );
+
   return compressedFiles;
+}
+
+const THUMBNAIL_OPTIONS = {
+  maxSizeMB: 0.05, // 50KB
+  maxWidthOrHeight: 300, // 300px
+  useWebWorker: true,
+  fileType: "image/jpeg" as const,
+};
+
+/**
+ * サムネイルを高速生成（プレビュー用）
+ * @param file - 画像ファイル
+ * @returns サムネイルのObject URL
+ */
+export async function createThumbnail(file: File): Promise<string> {
+  try {
+    const thumbnailBlob = await imageCompression(file, THUMBNAIL_OPTIONS);
+    return URL.createObjectURL(thumbnailBlob);
+  } catch {
+    return URL.createObjectURL(file);
+  }
 }
