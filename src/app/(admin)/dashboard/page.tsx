@@ -3,7 +3,7 @@
  */
 
 import Link from "next/link";
-import Image from "next/image";
+import { LazyImage } from "@/components/shared";
 import { getDashboardStats, getRecentReports } from "@/actions/reports";
 import { StatsCards } from "@/components/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,12 +57,11 @@ const DashboardPage = async () => {
                           className="relative w-10 h-10 rounded-lg overflow-hidden border-2 border-background"
                           style={{ zIndex: 3 - i }}
                         >
-                          <Image
+                          <LazyImage
                             src={photo.photoUrl}
                             alt=""
                             fill
                             className="object-cover"
-                            unoptimized
                           />
                         </div>
                       ))}

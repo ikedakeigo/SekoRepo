@@ -5,8 +5,8 @@
 
 "use client";
 
-import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
+import { LazyImage } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Download, MessageSquare, User } from "lucide-react";
 import { format } from "date-fns";
@@ -53,15 +53,13 @@ export const PhotoCard = ({ photo }: PhotoCardProps) => {
       <CardContent className="p-4">
         <div className="flex gap-4">
           {/* 写真 */}
-          <div className="relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
-            <Image
-              src={photo.photoUrl}
-              alt={photo.title}
-              fill
-              className="object-cover"
-              unoptimized
-            />
-          </div>
+          <LazyImage
+            src={photo.photoUrl}
+            alt={photo.title}
+            fill
+            className="object-cover"
+            containerClassName="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0"
+          />
 
           {/* 情報 */}
           <div className="flex-1 min-w-0 space-y-2">

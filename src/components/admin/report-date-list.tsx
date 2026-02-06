@@ -6,8 +6,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { LazyImage } from "@/components/shared";
 import {
   ChevronDown,
   User,
@@ -316,12 +316,11 @@ const ReportCard = ({
     <div className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-md transition-shadow">
       {/* 画像 */}
       <div className="h-40 relative">
-        <Image
+        <LazyImage
           src={photo.photoUrl}
           alt={photo.title}
           fill
           className="object-cover"
-          unoptimized
         />
         {/* 時刻バッジ */}
         <div className="absolute top-2 right-2 bg-black/50 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm">

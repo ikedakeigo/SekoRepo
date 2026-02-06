@@ -3,8 +3,8 @@
  * レポート詳細画面の閲覧モードで使用
  */
 
-import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
+import { LazyImage } from "@/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { PHOTO_TYPE_LABELS } from "@/types";
 import type { PhotoType } from "@/types";
@@ -43,16 +43,14 @@ export const PhotoViewCard = ({
         </div>
 
         {/* 写真 */}
-        <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden bg-muted">
-          <Image
-            src={photoUrl}
-            alt={title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, 50vw"
-            unoptimized
-          />
-        </div>
+        <LazyImage
+          src={photoUrl}
+          alt={title}
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, 50vw"
+          containerClassName="w-full aspect-[4/3] rounded-lg overflow-hidden bg-muted"
+        />
 
         {/* タイトル */}
         <h3 className="font-medium">{title}</h3>

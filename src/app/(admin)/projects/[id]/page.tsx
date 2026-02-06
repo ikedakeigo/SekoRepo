@@ -3,8 +3,8 @@
  */
 
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
+import { LazyImage } from "@/components/shared";
 import {
   getProjectWithPhotos,
   getProjectPostedDates,
@@ -100,15 +100,13 @@ const ProjectDetailPage = async ({ params }: ProjectDetailPageProps) => {
           {/* サムネイル画像 */}
           <div className="w-32 h-32 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0 border border-slate-200 dark:border-slate-700">
             {thumbnailUrl ? (
-              <div className="relative w-full h-full">
-                <Image
-                  src={thumbnailUrl}
-                  alt={project.name}
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
-              </div>
+              <LazyImage
+                src={thumbnailUrl}
+                alt={project.name}
+                fill
+                className="object-cover"
+                containerClassName="w-full h-full"
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-600">
                 <FileText className="size-10" />
