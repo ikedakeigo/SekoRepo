@@ -170,6 +170,29 @@ export interface ReportDetail {
 }
 
 // ============================================
+// アップロード状態管理
+// ============================================
+
+/** 写真アップロードステータス */
+export type PhotoUploadStatus =
+  | "pending"
+  | "compressing"
+  | "ready"
+  | "uploading"
+  | "completed"
+  | "error";
+
+/** 写真アップロード項目 */
+export interface PhotoUploadItem extends PhotoFormData {
+  id: string;
+  thumbnailUrl: string;
+  uploadStatus: PhotoUploadStatus;
+  uploadProgress: number;
+  uploadedUrl?: string;
+  error?: string;
+}
+
+// ============================================
 // API レスポンス用
 // ============================================
 
