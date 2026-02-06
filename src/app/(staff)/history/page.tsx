@@ -2,8 +2,8 @@
  * 送信履歴画面
  */
 
-import Image from "next/image";
 import Link from "next/link";
+import { LazyImage } from "@/components/shared";
 import { getUserReports } from "@/actions/reports";
 import { Card, CardContent } from "@/components/ui/card";
 import { Camera, ChevronRight } from "lucide-react";
@@ -27,12 +27,11 @@ const HistoryPage = async () => {
                     {/* サムネイル */}
                     <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                       {report.thumbnailUrl ? (
-                        <Image
+                        <LazyImage
                           src={report.thumbnailUrl}
                           alt={report.projectName}
                           fill
                           className="object-cover"
-                          unoptimized
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
