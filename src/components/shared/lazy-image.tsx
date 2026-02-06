@@ -54,6 +54,7 @@ export function LazyImage({
       <div
         className={cn(
           "flex items-center justify-center bg-muted",
+          fill && "w-full h-full",
           containerClassName
         )}
       >
@@ -63,7 +64,7 @@ export function LazyImage({
   }
 
   return (
-    <div className={cn("relative", containerClassName)}>
+    <div className={cn("relative", fill && "w-full h-full", containerClassName)}>
       {isLoading && (
         <Skeleton className="absolute inset-0 w-full h-full rounded-none" />
       )}
