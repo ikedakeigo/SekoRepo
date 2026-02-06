@@ -27,7 +27,7 @@ interface LazyImageProps {
  * 遅延読み込み画像
  * - 読み込み中: Skeleton表示
  * - エラー時: アイコンフォールバック
- * - Next.js Image による自動最適化
+ * - unoptimized: 外部ストレージ画像はサーバー側最適化をスキップ
  */
 export function LazyImage({
   src,
@@ -76,6 +76,7 @@ export function LazyImage({
         sizes={sizes}
         priority={priority}
         loading={priority ? undefined : "lazy"}
+        unoptimized
         className={cn(
           "transition-opacity duration-300",
           isLoading ? "opacity-0" : "opacity-100",
