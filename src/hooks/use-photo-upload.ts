@@ -252,7 +252,7 @@ export function usePhotoUpload(maxPhotos = 10): UsePhotoUploadReturn {
           uploadRelevantItems.reduce(
             (sum, item) => sum + item.uploadProgress,
             0
-          ) / items.length
+          ) / uploadRelevantItems.length
         );
 
   const canSubmit =

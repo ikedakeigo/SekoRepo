@@ -6,6 +6,8 @@
 import { createClient } from "./client";
 
 const BUCKET_NAME = "photos";
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 /**
  * 写真をXHRでSupabase Storageにアップロード（進捗追跡付き）
@@ -19,6 +21,20 @@ export async function uploadPhotoWithProgress(
   userId: string,
   onProgress: (percent: number) => void
 ): Promise<string> {
+  // ファイルのバリデーション
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    throw new Error("サポートされていないファイル形式です（JPEG, PNG, WebPのみ）");
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error("ファイルサイズが10MBを超えています");
+  }
+
+  // userIdのサニタイズ（パストラバーサル防止）
+  const safeUserId = userId.replace(/[^a-zA-Z0-9\-_]/g, "");
+  if (!safeUserId) {
+    throw new Error("無効なユーザーIDです");
+  }
+
   const supabase = createClient();
 
   // 認証トークンを取得
@@ -35,7 +51,7 @@ export async function uploadPhotoWithProgress(
   const fileExt = rawExt.replace(/[^a-zA-Z0-9]/g, "") || "jpg";
   const timestamp = Date.now();
   const randomId = Math.random().toString(36).slice(2);
-  const filePath = `${userId}/${timestamp}-${randomId}.${fileExt}`;
+  const filePath = `${safeUserId}/${timestamp}-${randomId}.${fileExt}`;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const uploadUrl = `${supabaseUrl}/storage/v1/object/${BUCKET_NAME}/${filePath}`;
