@@ -10,13 +10,31 @@ import Image from "next/image";
 import { Upload, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { compressImages } from "@/lib/image-compression";
-import type { PhotoFormData, PhotoType } from "@/types";
+import type { PhotoFormData, PhotoType, PhotoUploadItem } from "@/types";
 
-interface PhotoUploaderProps {
-  photos: PhotoFormData[];
-  onChange: (photos: PhotoFormData[]) => void;
+interface PhotoUploaderBaseProps {
   maxPhotos?: number;
 }
+
+/** レガシーモード: 内部で圧縮してPhotoFormData[]を返す */
+interface PhotoUploaderLegacyProps extends PhotoUploaderBaseProps {
+  photos: PhotoFormData[];
+  onChange: (photos: PhotoFormData[]) => void;
+  onFilesAdded?: never;
+  uploadItems?: never;
+  onRemoveUploadItem?: never;
+}
+
+/** 新モード: 生ファイルを外部に渡す（usePhotoUploadフック連携） */
+interface PhotoUploaderNewProps extends PhotoUploaderBaseProps {
+  photos?: never;
+  onChange?: never;
+  onFilesAdded: (files: File[]) => void;
+  uploadItems: PhotoUploadItem[];
+  onRemoveUploadItem: (id: string) => void;
+}
+
+type PhotoUploaderProps = PhotoUploaderLegacyProps | PhotoUploaderNewProps;
 
 /** デフォルトの写真データ */
 const createDefaultPhotoData = (
@@ -34,41 +52,48 @@ const createDefaultPhotoData = (
 /**
  * 写真アップローダー
  */
-export const PhotoUploader = ({
-  photos,
-  onChange,
-  maxPhotos = 10,
-}: PhotoUploaderProps) => {
+export const PhotoUploader = (props: PhotoUploaderProps) => {
+  const { maxPhotos = 10 } = props;
+  const isNewMode = "onFilesAdded" in props && !!props.onFilesAdded;
+
   const inputRef = useRef<HTMLInputElement>(null);
   const [isCompressing, setIsCompressing] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+
+  const photoCount = isNewMode ? props.uploadItems.length : props.photos.length;
 
   const handleFileChange = useCallback(
     async (files: FileList | null) => {
       if (!files) return;
 
-      const remainingSlots = maxPhotos - photos.length;
+      const remainingSlots = maxPhotos - photoCount;
       const filesToAdd = Array.from(files).slice(0, remainingSlots);
 
-      setIsCompressing(true);
-      try {
-        const compressedFiles = await compressImages(filesToAdd);
+      if (filesToAdd.length === 0) return;
 
-        const newPhotos = compressedFiles.map((file) => {
-          const previewUrl = URL.createObjectURL(file);
-          return createDefaultPhotoData(file, previewUrl);
-        });
-
-        onChange([...photos, ...newPhotos]);
-      } finally {
-        setIsCompressing(false);
+      if (isNewMode) {
+        // 新モード: 生ファイルを外部に渡す
+        props.onFilesAdded(filesToAdd);
+      } else {
+        // レガシーモード: 内部で圧縮
+        setIsCompressing(true);
+        try {
+          const compressedFiles = await compressImages(filesToAdd);
+          const newPhotos = compressedFiles.map((file) => {
+            const previewUrl = URL.createObjectURL(file);
+            return createDefaultPhotoData(file, previewUrl);
+          });
+          props.onChange([...props.photos, ...newPhotos]);
+        } finally {
+          setIsCompressing(false);
+        }
       }
 
       if (inputRef.current) {
         inputRef.current.value = "";
       }
     },
-    [photos, onChange, maxPhotos]
+    [maxPhotos, photoCount, isNewMode, props]
   );
 
   const handleInputChange = useCallback(
@@ -99,17 +124,41 @@ export const PhotoUploader = ({
 
   const handleRemove = useCallback(
     (index: number) => {
-      const photoToRemove = photos[index];
-      if (photoToRemove.previewUrl) {
-        URL.revokeObjectURL(photoToRemove.previewUrl);
+      if (isNewMode) {
+        const item = props.uploadItems[index];
+        if (item) {
+          props.onRemoveUploadItem(item.id);
+        }
+      } else {
+        const photoToRemove = props.photos[index];
+        if (photoToRemove.previewUrl) {
+          URL.revokeObjectURL(photoToRemove.previewUrl);
+        }
+        const newPhotos = props.photos.filter((_, i) => i !== index);
+        props.onChange(newPhotos);
       }
-      const newPhotos = photos.filter((_, i) => i !== index);
-      onChange(newPhotos);
     },
-    [photos, onChange]
+    [isNewMode, props]
   );
 
-  const canAddMore = photos.length < maxPhotos;
+  const canAddMore = photoCount < maxPhotos;
+
+  // プレビュー用のデータ
+  const previewItems = isNewMode
+    ? props.uploadItems.map((item) => ({
+        key: item.id,
+        previewUrl: item.previewUrl || item.thumbnailUrl,
+        isCompressing: item.uploadStatus === "compressing",
+      }))
+    : props.photos.map((photo, i) => ({
+        key: String(i),
+        previewUrl: photo.previewUrl,
+        isCompressing: false,
+      }));
+
+  const showCompressingState = isNewMode
+    ? props.uploadItems.some((item) => item.uploadStatus === "compressing")
+    : isCompressing;
 
   return (
     <div className="space-y-4">
@@ -133,14 +182,14 @@ export const PhotoUploader = ({
             "group-hover:bg-primary/10 group-hover:text-primary"
           )}
         >
-          {isCompressing ? (
+          {showCompressingState ? (
             <Loader2 className="size-8 animate-spin" />
           ) : (
             <Upload className="size-8" />
           )}
         </div>
         <p className="text-lg font-bold text-slate-900 dark:text-white">
-          {isCompressing
+          {showCompressingState
             ? "画像を圧縮中..."
             : "クリックしてアップロード、またはドラッグ＆ドロップ"}
         </p>
@@ -148,21 +197,30 @@ export const PhotoUploader = ({
           高解像度のJPGまたはPNG（最大10MBまで）
         </p>
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
-          {photos.length}/{maxPhotos}枚選択中
+          {photoCount}/{maxPhotos}枚選択中
         </p>
       </div>
 
       {/* 選択済み写真のプレビュー */}
-      {photos.length > 0 && (
+      {previewItems.length > 0 && (
         <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
-          {photos.map((photo, index) => (
-            <div key={index} className="relative aspect-square">
-              <Image
-                src={photo.previewUrl}
-                alt={`写真 ${index + 1}`}
-                fill
-                className="object-cover rounded-lg"
-              />
+          {previewItems.map((item, index) => (
+            <div key={item.key} className="relative aspect-square">
+              {item.previewUrl ? (
+                <Image
+                  src={item.previewUrl}
+                  alt={`写真 ${index + 1}`}
+                  fill
+                  className={cn(
+                    "object-cover rounded-lg",
+                    item.isCompressing && "opacity-50"
+                  )}
+                />
+              ) : (
+                <div className="w-full h-full rounded-lg bg-muted flex items-center justify-center">
+                  <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                </div>
+              )}
               <button
                 type="button"
                 onClick={(e) => {
