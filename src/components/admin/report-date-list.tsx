@@ -36,6 +36,7 @@ import {
   Circle,
   Loader2,
   Trash2,
+  MessageSquareText,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
@@ -290,7 +291,7 @@ export const ReportDateList = ({
         const dateObj = new Date(date);
         const isToday = getDateKey(new Date()) === date;
         const displayDate = isToday
-          ? `本日、${format(dateObj, "M月d日", { locale: ja })}`
+          ? `本日:${format(dateObj, "M月d日", { locale: ja })}`
           : format(dateObj, "M月d日（E）", { locale: ja });
 
         return (
@@ -413,8 +414,31 @@ export const ReportDateList = ({
               </div>
             </div>
 
+            {/* レポートサマリー（今日の作業について） */}
+            {dateReports
+              .filter((r) => r.summary)
+              .map((report) => (
+                <div
+                  key={`summary-${report.id}`}
+                  className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageSquareText className="size-4 text-blue-600 dark:text-blue-400" />
+                    <span className="text-sm font-bold text-blue-700 dark:text-blue-300">
+                      今日の作業について
+                    </span>
+                    <span className="text-xs text-blue-500 dark:text-blue-400">
+                      — {report.user.name}
+                    </span>
+                  </div>
+                  <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                    {report.summary}
+                  </p>
+                </div>
+              ))}
+
             {/* レポートカードグリッド */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {dateReports.flatMap((report) =>
                 report.photos.map((photo) => (
                   <ReportCard
@@ -476,8 +500,8 @@ const ReportCard = ({
         isDeleting && "opacity-50 pointer-events-none"
       )}
     >
-      {/* 画像 */}
-      <div className="h-40 relative">
+      {/* 画像（正方形） */}
+      <div className="aspect-square relative">
         <LazyImage
           src={photo.photoUrl}
           alt={photo.title}
@@ -530,6 +554,11 @@ const ReportCard = ({
         <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
           {photo.title}
         </p>
+        {photo.comment && (
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
+            {photo.comment}
+          </p>
+        )}
         <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
           <User className="size-3" />
           {report.user.name}
