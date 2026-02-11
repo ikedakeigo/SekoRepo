@@ -78,9 +78,10 @@ export const ProjectDeleteButton = ({
           <AlertDialogCancel>キャンセル</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleDelete}
+            disabled={isPending}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            削除する
+            {isPending ? "削除中..." : "削除する"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
