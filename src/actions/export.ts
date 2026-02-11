@@ -39,6 +39,7 @@ const CSV_HEADERS = [
   "タイトル",
   "コメント",
   "お客様の反応",
+  "今日の作業について",
   "撮影者",
   "登録日",
   "画像URL",
@@ -51,6 +52,7 @@ const photoToRow = (
     title: string;
     comment?: string | null;
     customerFeedback?: string | null;
+    reportSummary?: string | null;
     createdAt: Date;
     photoUrl: string;
     user?: { name: string } | null;
@@ -68,6 +70,7 @@ const photoToRow = (
     photo.title,
     photo.comment || "",
     photo.customerFeedback || "",
+    photo.reportSummary || "",
     photo.user?.name || "",
     format(new Date(photo.createdAt), "yyyy/MM/dd HH:mm", { locale: ja }),
     photo.photoUrl,
