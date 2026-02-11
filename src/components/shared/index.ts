@@ -11,4 +11,8 @@ export {
   DashboardSkeleton,
   ProjectDetailSkeleton,
   PhotoCardSkeleton,
+  HistoryPageSkeleton,
+  ProjectsListSkeleton,
+  SettingsPageSkeleton,
+  ReportFormSkeleton,
 } from "./skeletons";
