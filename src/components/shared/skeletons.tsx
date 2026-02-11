@@ -4,7 +4,7 @@
  */
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 /**
  * スタッフホーム画面のスケルトン
@@ -175,6 +175,178 @@ export function PhotoCardSkeleton() {
       <div className="p-3 space-y-2">
         <Skeleton className="h-4 w-3/4" />
         <Skeleton className="h-3 w-1/2" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 送信履歴一覧画面のスケルトン
+ */
+export function HistoryPageSkeleton() {
+  return (
+    <div className="p-4 space-y-4">
+      <Skeleton className="h-7 w-24" />
+
+      <div className="space-y-3">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <Card key={i}>
+            <CardContent className="p-4">
+              <div className="flex gap-4 items-center">
+                <Skeleton className="w-16 h-16 rounded-lg flex-shrink-0" />
+                <div className="flex-1 min-w-0 space-y-2">
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-3 w-36" />
+                </div>
+                <Skeleton className="h-5 w-5 flex-shrink-0" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 案件一覧画面のスケルトン
+ */
+export function ProjectsListSkeleton() {
+  return (
+    <div className="max-w-7xl mx-auto w-full">
+      {/* ヘッダー */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+        <Skeleton className="h-10 w-32" />
+      </div>
+
+      {/* プロジェクトグリッド */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <Card key={i}>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-5 w-36" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Skeleton className="h-4 w-48" />
+              <div className="flex items-center gap-4">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 設定画面のスケルトン
+ */
+export function SettingsPageSkeleton() {
+  return (
+    <div className="space-y-6">
+      <Skeleton className="h-8 w-16" />
+
+      {/* プロフィール */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            <Skeleton className="h-5 w-24" />
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-16 w-16 rounded-full" />
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-5 w-14 rounded-full" />
+              </div>
+              <Skeleton className="h-4 w-48" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* アプリ情報 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            <Skeleton className="h-5 w-24" />
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex justify-between">
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+          <div className="flex justify-between">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-4 w-16" />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/**
+ * レポート入力画面のスケルトン
+ */
+export function ReportFormSkeleton() {
+  return (
+    <div className="min-h-screen bg-background">
+      {/* ヘッダー */}
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Skeleton className="h-4 w-12" />
+          <Skeleton className="h-4 w-4" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-4 w-56 mt-1" />
+      </div>
+
+      <div className="max-w-[800px] mx-auto w-full p-4 md:py-10">
+        {/* ステップインジケーター */}
+        <div className="flex items-center justify-center gap-2 mb-8">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-2">
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <Skeleton className="h-4 w-16" />
+              {i < 3 && <Skeleton className="h-0.5 w-8" />}
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-12">
+          {/* Step 1: 案件選択 */}
+          <section>
+            <div className="flex items-center gap-2 mb-6">
+              <Skeleton className="h-5 w-5" />
+              <Skeleton className="h-6 w-48" />
+            </div>
+            <Skeleton className="h-12 w-full rounded-lg" />
+          </section>
+
+          {/* Step 2: 写真アップロード */}
+          <section>
+            <div className="flex items-center gap-2 mb-6">
+              <Skeleton className="h-5 w-5" />
+              <Skeleton className="h-6 w-56" />
+            </div>
+            <Skeleton className="h-40 w-full rounded-xl" />
+          </section>
+        </div>
       </div>
     </div>
   );
