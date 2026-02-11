@@ -6,6 +6,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireAdmin } from "./auth";
+import { deletePhoto } from "@/lib/supabase/storage";
 import { revalidatePath } from "next/cache";
 import type { ProjectStatus } from "@/types";
 
@@ -134,10 +135,11 @@ export const getProjectWithPhotos = async (projectId: string) => {
     throw new Error("案件が見つかりません");
   }
 
-  // 写真をフラット化
+  // 写真をフラット化（reportIdを明示的にマッピング）
   const photos = project.reports.flatMap((report) =>
     report.photos.map((photo) => ({
       ...photo,
+      reportId: report.id,
       user: report.user,
       reportCreatedAt: report.createdAt,
     }))
@@ -169,13 +171,55 @@ export const updateProjectStatus = async (
 };
 
 /**
- * 案件を削除
+ * 案件を削除（ストレージ・関連レコードも含む）
  */
 export const deleteProject = async (projectId: string) => {
   await requireAdmin();
 
-  await prisma.project.delete({
+  // 全レポート・写真URLを取得
+  const project = await prisma.project.findUnique({
     where: { id: projectId },
+    include: {
+      reports: {
+        include: {
+          photos: {
+            select: { photoUrl: true },
+          },
+        },
+      },
+    },
+  });
+
+  if (!project) {
+    throw new Error("案件が見つかりません");
+  }
+
+  // ストレージから写真を削除
+  const allPhotoUrls = project.reports.flatMap((report) =>
+    report.photos.map((photo) => photo.photoUrl)
+  );
+
+  const deletePromises = allPhotoUrls.map(async (photoUrl) => {
+    try {
+      await deletePhoto(photoUrl);
+    } catch (error) {
+      console.error(`Failed to delete photo: ${photoUrl}`, error);
+      // ストレージ削除に失敗してもDB削除は続行
+    }
+  });
+  await Promise.all(deletePromises);
+
+  // トランザクションでDB削除（部分削除を防止）
+  await prisma.$transaction(async (tx) => {
+    // ProjectPostedDateを削除（カスケードなしのため手動削除）
+    await tx.projectPostedDate.deleteMany({
+      where: { projectId },
+    });
+
+    // DB削除（カスケードでreports→photosも削除される）
+    await tx.project.delete({
+      where: { id: projectId },
+    });
   });
 
   revalidatePath("/projects");

@@ -11,7 +11,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Loader2, Send, Building2, Camera, Info, ChevronRight } from "lucide-react";
+import { Loader2, Send, Building2, Camera, Info, ChevronRight, CheckCircle } from "lucide-react";
 import { PhotoUploader } from "./photo-uploader";
 import { PhotoDetailCard } from "./photo-detail-card";
 import { PhotoUploadProgress } from "./photo-upload-progress";
@@ -46,6 +46,9 @@ export const ReportForm = ({
   const [projectId, setProjectId] = useState("");
   const [summary, setSummary] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitPhase, setSubmitPhase] = useState<
+    "idle" | "compressing" | "uploading" | "saving" | "success"
+  >("idle");
   const [errors, setErrors] = useState<{
     projectId?: string;
     summary?: string;
@@ -181,9 +184,11 @@ export const ReportForm = ({
     }
 
     setIsSubmitting(true);
+    setSubmitPhase("compressing");
 
     try {
       // XHRアップロード（個別進捗追跡付き）
+      setSubmitPhase("uploading");
       const uploadedItems = await uploadAll(userId);
 
       // エラーがあるか確認
@@ -197,6 +202,7 @@ export const ReportForm = ({
       }
 
       // DB保存
+      setSubmitPhase("saving");
       const photosWithUrls = uploadedItems.map((item) => ({
         photoUrl: item.uploadedUrl!,
         photoType: item.photoType,
@@ -211,12 +217,16 @@ export const ReportForm = ({
         photos: photosWithUrls,
       });
 
+      // 成功表示
+      setSubmitPhase("success");
       toast.success("レポートを送信しました");
+      await new Promise((resolve) => setTimeout(resolve, 500));
       router.push("/?success=true");
     } catch {
       await cleanupUploadedPhotos();
       toast.error("送信に失敗しました。もう一度お試しください。");
       setIsSubmitting(false);
+      setSubmitPhase("idle");
     }
   };
 
@@ -290,26 +300,27 @@ export const ReportForm = ({
                 Step 2: 写真アップロード
               </h2>
             </div>
-            {!isSubmitting ? (
-              <PhotoUploader
-                onFilesAdded={addPhotos}
-                uploadItems={photoItems}
-                onRemoveUploadItem={removePhoto}
-              />
-            ) : (
+            {isSubmitting && photoItems.length > 0 && (
               <PhotoUploadProgress
                 items={photoItems}
                 overallProgress={overallProgress}
               />
             )}
+            <div className={cn(isSubmitting && "opacity-50 pointer-events-none")}>
+              <PhotoUploader
+                onFilesAdded={addPhotos}
+                uploadItems={photoItems}
+                onRemoveUploadItem={removePhoto}
+              />
+            </div>
             {errors.photos && (
               <p className="text-sm text-red-500 mt-2">{errors.photos}</p>
             )}
           </section>
 
           {/* 写真詳細カード */}
-          {photoItems.length > 0 && !isSubmitting && (
-            <div className="space-y-6">
+          {photoItems.length > 0 && (
+            <div className={cn("space-y-6", isSubmitting && "opacity-50 pointer-events-none")}>
               {photoItems.map((item, index) => (
                 <PhotoDetailCard
                   key={item.id}
@@ -402,15 +413,27 @@ export const ReportForm = ({
           </Button>
           <Button
             type="submit"
-            className="flex-[2] h-12 rounded-lg bg-primary text-white font-bold flex items-center justify-center gap-2 hover:bg-primary/90 shadow-lg shadow-primary/25"
+            className={cn(
+              "flex-2 h-12 rounded-lg text-white font-bold flex items-center justify-center gap-2 shadow-lg transition-colors",
+              submitPhase === "success"
+                ? "bg-green-500 shadow-green-500/25"
+                : "bg-primary hover:bg-primary/90 shadow-primary/25"
+            )}
             disabled={isFormDisabled || photoItems.length === 0 || isCompressing}
           >
-            {isSubmitting ? (
+            {submitPhase === "success" ? (
+              <>
+                <CheckCircle className="size-5" />
+                送信完了
+              </>
+            ) : isSubmitting ? (
               <>
                 <Loader2 className="size-5 animate-spin" />
-                {isUploading
-                  ? `アップロード中... ${overallProgress}%`
-                  : "レポートを保存中..."}
+                {submitPhase === "compressing"
+                  ? "画像を圧縮中..."
+                  : submitPhase === "uploading"
+                    ? `アップロード中... ${overallProgress}%`
+                    : "保存中..."}
               </>
             ) : (
               <>

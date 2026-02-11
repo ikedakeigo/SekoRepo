@@ -3,8 +3,13 @@
  * 案件詳細に表示する写真のタイムライン
  */
 
+"use client";
+
+import { useEffect, useState, useTransition } from "react";
 import { PhotoCard } from "./photo-card";
 import { PHOTO_TYPE_LABELS } from "@/types";
+import { deleteSinglePhoto } from "@/actions/reports";
+import { toast } from "sonner";
 import type { PhotoType } from "@/types";
 
 interface Photo {
@@ -15,6 +20,7 @@ interface Photo {
   comment?: string | null;
   customerFeedback?: string | null;
   createdAt: Date;
+  reportId: string;
   user?: {
     id: string;
     name: string;
@@ -58,16 +64,46 @@ const PHOTO_TYPE_ORDER: PhotoType[] = ["before", "during", "after", "other"];
  * 写真タイムライン
  */
 export const PhotoTimeline = ({ photos }: PhotoTimelineProps) => {
+  const [localPhotos, setLocalPhotos] = useState<Photo[]>(photos);
+  const [, startTransition] = useTransition();
+  const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
+
+  // サーバー再レンダー時にpropsと同期
+  useEffect(() => {
+    setLocalPhotos(photos);
+  }, [photos]);
+
+  const handleDeletePhoto = (photoId: string) => {
+    const previousPhotos = localPhotos;
+    setDeletingPhotoId(photoId);
+
+    // 楽観的更新: UIから即座に除去
+    setLocalPhotos((prev) => prev.filter((p) => p.id !== photoId));
+
+    startTransition(async () => {
+      try {
+        await deleteSinglePhoto(photoId);
+        toast.success("写真を削除しました");
+      } catch (error) {
+        setLocalPhotos(previousPhotos);
+        toast.error("削除に失敗しました");
+        console.error("Delete photo failed:", error);
+      } finally {
+        setDeletingPhotoId(null);
+      }
+    });
+  };
+
   // 種類別にグループ化
   const groupedPhotos = PHOTO_TYPE_ORDER.reduce(
     (acc, type) => {
-      acc[type] = photos.filter((p) => p.photoType === type);
+      acc[type] = localPhotos.filter((p) => p.photoType === type);
       return acc;
     },
     {} as Record<PhotoType, Photo[]>
   );
 
-  if (photos.length === 0) {
+  if (localPhotos.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
         まだ写真がありません
@@ -102,7 +138,11 @@ export const PhotoTimeline = ({ photos }: PhotoTimelineProps) => {
                   <div
                     className={`absolute -left-[1.6rem] top-4 w-2 h-2 rounded-full ${colors.dot}`}
                   />
-                  <PhotoCard photo={photo} />
+                  <PhotoCard
+                    photo={photo}
+                    onDeletePhoto={handleDeletePhoto}
+                    isDeleting={deletingPhotoId === photo.id}
+                  />
                 </div>
               ))}
             </div>

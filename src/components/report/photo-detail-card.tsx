@@ -5,7 +5,7 @@
 
 "use client";
 
-import Image from "next/image";
+import { LazyImage } from "@/components/shared";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -62,7 +62,7 @@ export const PhotoDetailCard = ({
       <div className="md:flex">
         {/* プレビュー画像 */}
         <div className="md:w-1/3 h-48 md:h-auto relative">
-          <Image
+          <LazyImage
             src={data.previewUrl}
             alt={`写真 ${index + 1}`}
             fill

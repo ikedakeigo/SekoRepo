@@ -460,6 +460,56 @@ export const updateReportSummary = async (
 };
 
 /**
+ * 写真を1枚削除（管理者専用）
+ * ストレージとDBから削除。レポートの最後の1枚の場合はレポートごと削除。
+ */
+export const deleteSinglePhoto = async (photoId: string) => {
+  await requireAdmin();
+
+  const photo = await prisma.photo.findUnique({
+    where: { id: photoId },
+    include: { report: true },
+  });
+
+  if (!photo) {
+    throw new Error("写真が見つかりません");
+  }
+
+  const projectId = photo.report.projectId;
+  const reportId = photo.reportId;
+
+  // ストレージから削除
+  try {
+    await deletePhoto(photo.photoUrl);
+  } catch (error) {
+    console.error(`Failed to delete photo from storage: ${photo.photoUrl}`, error);
+  }
+
+  // 常に写真を先に削除
+  await prisma.photo.delete({
+    where: { id: photoId },
+  });
+
+  // 空になったレポートを削除（競合状態に強い: 削除後のカウントで判定）
+  const remainingPhotos = await prisma.photo.count({
+    where: { reportId },
+  });
+
+  if (remainingPhotos === 0) {
+    await prisma.report.delete({
+      where: { id: reportId },
+    });
+  }
+
+  revalidatePath("/");
+  revalidatePath("/history");
+  revalidatePath("/dashboard");
+  revalidatePath(`/projects/${projectId}`);
+
+  return { success: true };
+};
+
+/**
  * レポートを削除（管理者専用）
  * レポートに紐づく写真もストレージから削除
  */
