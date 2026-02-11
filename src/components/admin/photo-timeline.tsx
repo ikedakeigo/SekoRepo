@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { PhotoCard } from "./photo-card";
 import { PHOTO_TYPE_LABELS } from "@/types";
 import { deleteSinglePhoto } from "@/actions/reports";
@@ -67,6 +67,11 @@ export const PhotoTimeline = ({ photos }: PhotoTimelineProps) => {
   const [localPhotos, setLocalPhotos] = useState<Photo[]>(photos);
   const [, startTransition] = useTransition();
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
+
+  // サーバー再レンダー時にpropsと同期
+  useEffect(() => {
+    setLocalPhotos(photos);
+  }, [photos]);
 
   const handleDeletePhoto = (photoId: string) => {
     const previousPhotos = localPhotos;
