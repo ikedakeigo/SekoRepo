@@ -324,6 +324,7 @@ export const ReportDateList = ({
                       <AlertDialogCancel>キャンセル</AlertDialogCancel>
                       <AlertDialogAction
                         onClick={() => handleDeleteDateReports(dateReports)}
+                        disabled={isPending}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                       >
                         全て削除する
@@ -452,6 +453,7 @@ const ReportCard = ({
                 <AlertDialogCancel>キャンセル</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={onDeletePhoto}
+                  disabled={isDeleting}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
                   削除する

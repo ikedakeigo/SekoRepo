@@ -139,6 +139,7 @@ export const PhotoCard = ({
                         <AlertDialogCancel>キャンセル</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={() => onDeletePhoto(photo.id)}
+                          disabled={isDeleting}
                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
                           削除する
