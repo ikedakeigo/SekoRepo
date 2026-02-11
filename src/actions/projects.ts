@@ -209,14 +209,17 @@ export const deleteProject = async (projectId: string) => {
   });
   await Promise.all(deletePromises);
 
-  // ProjectPostedDateを削除（カスケードなしのため手動削除）
-  await prisma.projectPostedDate.deleteMany({
-    where: { projectId },
-  });
+  // トランザクションでDB削除（部分削除を防止）
+  await prisma.$transaction(async (tx) => {
+    // ProjectPostedDateを削除（カスケードなしのため手動削除）
+    await tx.projectPostedDate.deleteMany({
+      where: { projectId },
+    });
 
-  // DB削除（カスケードでreports→photosも削除される）
-  await prisma.project.delete({
-    where: { id: projectId },
+    // DB削除（カスケードでreports→photosも削除される）
+    await tx.project.delete({
+      where: { id: projectId },
+    });
   });
 
   revalidatePath("/projects");
