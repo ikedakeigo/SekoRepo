@@ -19,11 +19,19 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { LazyImage } from "@/components/shared";
 import {
   ChevronDown,
   User,
   Download,
+  FileText,
+  ImageDown,
   Check,
   Circle,
   Loader2,
@@ -35,6 +43,7 @@ import { cn } from "@/lib/utils";
 import { toggleDatePostedStatus } from "@/actions/projects";
 import { deleteReport, deleteSinglePhoto } from "@/actions/reports";
 import { exportProjectByDateToCSV } from "@/actions/export";
+import { downloadPhotosAsZip } from "@/lib/download-photos-zip";
 import { toast } from "sonner";
 
 interface Photo {
@@ -109,6 +118,7 @@ export const ReportDateList = ({
   const [localReports, setLocalReports] = useState<Report[]>(reports);
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
   const [downloadingDate, setDownloadingDate] = useState<string | null>(null);
+  const [downloadingPhotosDate, setDownloadingPhotosDate] = useState<string | null>(null);
 
   // サーバー再レンダー時にpropsと同期
   useEffect(() => {
@@ -214,8 +224,7 @@ export const ReportDateList = ({
     });
   };
 
-  const handleDateCSVDownload = async (date: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDateCSVDownload = async (date: string) => {
     setDownloadingDate(date);
 
     try {
@@ -241,6 +250,28 @@ export const ReportDateList = ({
       toast.error("ダウンロードに失敗しました");
     } finally {
       setDownloadingDate(null);
+    }
+  };
+
+  const handleDatePhotoDownload = async (
+    date: string,
+    dateReports: Report[]
+  ) => {
+    setDownloadingPhotosDate(date);
+
+    try {
+      const allPhotos = dateReports.flatMap((r) => r.photos);
+      const dateForFileName = date.replace(/-/g, "");
+      await downloadPhotosAsZip(
+        allPhotos,
+        `${projectName}_${dateForFileName}.zip`
+      );
+      toast.success("写真をダウンロードしました");
+    } catch (error) {
+      console.error("Photo download error:", error);
+      toast.error("ダウンロードに失敗しました");
+    } finally {
+      setDownloadingPhotosDate(null);
     }
   };
 
@@ -284,19 +315,43 @@ export const ReportDateList = ({
               </div>
 
               <div className="flex items-center gap-2">
-                {/* CSVダウンロードボタン */}
-                <button
-                  onClick={(e) => handleDateCSVDownload(date, e)}
-                  disabled={downloadingDate === date}
-                  className="text-primary text-sm font-bold flex items-center gap-1 hover:underline disabled:opacity-50"
-                >
-                  {downloadingDate === date ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Download className="size-4" />
-                  )}
-                  CSVダウンロード
-                </button>
+                {/* ダウンロードドロップダウン */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={
+                        downloadingDate === date ||
+                        downloadingPhotosDate === date
+                      }
+                    >
+                      {downloadingDate === date ||
+                      downloadingPhotosDate === date ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Download className="size-4" />
+                      )}
+                      ダウンロード
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => handleDateCSVDownload(date)}
+                    >
+                      <FileText className="size-4" />
+                      CSVダウンロード
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        handleDatePhotoDownload(date, dateReports)
+                      }
+                    >
+                      <ImageDown className="size-4" />
+                      写真ダウンロード
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
                 {/* 日付ごと一括削除 */}
                 <AlertDialog>
