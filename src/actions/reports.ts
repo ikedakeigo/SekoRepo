@@ -468,13 +468,7 @@ export const deleteSinglePhoto = async (photoId: string) => {
 
   const photo = await prisma.photo.findUnique({
     where: { id: photoId },
-    include: {
-      report: {
-        include: {
-          _count: { select: { photos: true } },
-        },
-      },
-    },
+    include: { report: true },
   });
 
   if (!photo) {
@@ -482,6 +476,7 @@ export const deleteSinglePhoto = async (photoId: string) => {
   }
 
   const projectId = photo.report.projectId;
+  const reportId = photo.reportId;
 
   // ストレージから削除
   try {
@@ -490,15 +485,19 @@ export const deleteSinglePhoto = async (photoId: string) => {
     console.error(`Failed to delete photo from storage: ${photo.photoUrl}`, error);
   }
 
-  if (photo.report._count.photos <= 1) {
-    // レポートの最後の1枚 → レポートごと削除
+  // 常に写真を先に削除
+  await prisma.photo.delete({
+    where: { id: photoId },
+  });
+
+  // 空になったレポートを削除（競合状態に強い: 削除後のカウントで判定）
+  const remainingPhotos = await prisma.photo.count({
+    where: { reportId },
+  });
+
+  if (remainingPhotos === 0) {
     await prisma.report.delete({
-      where: { id: photo.reportId },
-    });
-  } else {
-    // DBから写真レコードのみ削除
-    await prisma.photo.delete({
-      where: { id: photoId },
+      where: { id: reportId },
     });
   }
 
