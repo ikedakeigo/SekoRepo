@@ -5,7 +5,8 @@
 
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -101,6 +102,7 @@ export const ReportDateList = ({
   postedDates,
 }: ReportDateListProps) => {
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
   const [localPostedDates, setLocalPostedDates] = useState<Set<string>>(
     new Set(postedDates)
   );
@@ -108,10 +110,21 @@ export const ReportDateList = ({
   const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
   const [downloadingDate, setDownloadingDate] = useState<string | null>(null);
 
+  // サーバー再レンダー時にpropsと同期
+  useEffect(() => {
+    setLocalReports(reports);
+  }, [reports]);
+
+  useEffect(() => {
+    setLocalPostedDates(new Set(postedDates));
+  }, [postedDates]);
+
   const groupedReports = groupReportsByDate(localReports);
 
   const handleTogglePosted = (date: string, e: React.MouseEvent) => {
     e.stopPropagation();
+
+    const previousDates = new Set(localPostedDates);
 
     setLocalPostedDates((prev) => {
       const next = new Set(prev);
@@ -124,7 +137,13 @@ export const ReportDateList = ({
     });
 
     startTransition(async () => {
-      await toggleDatePostedStatus(projectId, date);
+      try {
+        await toggleDatePostedStatus(projectId, date);
+      } catch (error) {
+        setLocalPostedDates(previousDates);
+        toast.error("ステータスの更新に失敗しました");
+        console.error("Toggle posted failed:", error);
+      }
     });
   };
 
@@ -174,20 +193,23 @@ export const ReportDateList = ({
   };
 
   const handleDeleteDateReports = (dateReports: Report[]) => {
-    const previousReports = localReports;
     const reportIds = dateReports.map((r) => r.id);
 
     // 楽観的更新: UIから即座に除去
     setLocalReports((prev) => prev.filter((r) => !reportIds.includes(r.id)));
 
     startTransition(async () => {
-      try {
-        await Promise.all(reportIds.map((id) => deleteReport(id)));
+      const results = await Promise.allSettled(
+        reportIds.map((id) => deleteReport(id))
+      );
+      const failed = results.filter((r) => r.status === "rejected");
+
+      if (failed.length > 0) {
+        // 部分失敗: サーバーの実際の状態に同期
+        router.refresh();
+        toast.error(`${failed.length}件の削除に失敗しました`);
+      } else {
         toast.success(`${dateReports.length}件のレポートを削除しました`);
-      } catch (error) {
-        setLocalReports(previousReports);
-        toast.error("削除に失敗しました");
-        console.error("Delete date reports failed:", error);
       }
     });
   };
