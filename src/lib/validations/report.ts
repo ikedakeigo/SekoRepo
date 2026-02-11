@@ -18,9 +18,8 @@ export const photoFormSchema = z.object({
     .max(200, "タイトルは200文字以内で入力してください"),
   comment: z
     .string()
-    .max(1000, "コメントは1000文字以内で入力してください")
-    .optional()
-    .default(""),
+    .min(1, "コメントは必須です")
+    .max(1000, "コメントは1000文字以内で入力してください"),
   customerFeedback: z
     .string()
     .max(500, "お客様の反応は500文字以内で入力してください")
