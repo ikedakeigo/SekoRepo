@@ -7,6 +7,17 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { LazyImage } from "@/components/shared";
 import {
   ChevronDown,
@@ -15,12 +26,13 @@ import {
   Check,
   Circle,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toggleDatePostedStatus } from "@/actions/projects";
-import { deleteReport } from "@/actions/reports";
+import { deleteReport, deleteSinglePhoto } from "@/actions/reports";
 import { exportProjectByDateToCSV } from "@/actions/export";
 import { toast } from "sonner";
 
@@ -92,8 +104,8 @@ export const ReportDateList = ({
   const [localPostedDates, setLocalPostedDates] = useState<Set<string>>(
     new Set(postedDates)
   );
-  const [deletingReportId, setDeletingReportId] = useState<string | null>(null);
   const [localReports, setLocalReports] = useState<Report[]>(reports);
+  const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
   const [downloadingDate, setDownloadingDate] = useState<string | null>(null);
 
   const groupedReports = groupReportsByDate(localReports);
@@ -133,21 +145,49 @@ export const ReportDateList = ({
     }
   };
 
-  const handleDeleteReport = async (reportId: string) => {
-    setDeletingReportId(reportId);
+  const handleDeletePhoto = (photoId: string) => {
+    const previousReports = localReports;
+    setDeletingPhotoId(photoId);
 
-    setLocalReports((prev) => prev.filter((r) => r.id !== reportId));
+    // 楽観的更新: 写真をレポートから除去、写真が0枚になったレポートも除去
+    setLocalReports((prev) =>
+      prev
+        .map((r) => ({
+          ...r,
+          photos: r.photos.filter((p) => p.id !== photoId),
+        }))
+        .filter((r) => r.photos.length > 0)
+    );
 
     startTransition(async () => {
       try {
-        await deleteReport(reportId);
-        toast.success("レポートを削除しました");
+        await deleteSinglePhoto(photoId);
+        toast.success("写真を削除しました");
       } catch (error) {
-        setLocalReports(reports);
+        setLocalReports(previousReports);
         toast.error("削除に失敗しました");
-        console.error("Delete failed:", error);
+        console.error("Delete photo failed:", error);
       } finally {
-        setDeletingReportId(null);
+        setDeletingPhotoId(null);
+      }
+    });
+  };
+
+  const handleDeleteDateReports = (dateReports: Report[]) => {
+    const previousReports = localReports;
+    const reportIds = dateReports.map((r) => r.id);
+
+    // 楽観的更新: UIから即座に除去
+    setLocalReports((prev) => prev.filter((r) => !reportIds.includes(r.id)));
+
+    startTransition(async () => {
+      try {
+        await Promise.all(reportIds.map((id) => deleteReport(id)));
+        toast.success(`${dateReports.length}件のレポートを削除しました`);
+      } catch (error) {
+        setLocalReports(previousReports);
+        toast.error("削除に失敗しました");
+        console.error("Delete date reports failed:", error);
       }
     });
   };
@@ -236,12 +276,45 @@ export const ReportDateList = ({
                   CSVダウンロード
                 </button>
 
+                {/* 日付ごと一括削除 */}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                    >
+                      <Trash2 className="size-4 mr-1" />
+                      削除
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        {displayDate}のレポートを全て削除しますか？
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {dateReports.length}件のレポート（{photoCount}枚の写真）が削除されます。
+                        この操作は元に戻せません。
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => handleDeleteDateReports(dateReports)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        全て削除する
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+
                 {/* 投稿済みトグル */}
                 <Button
                   variant={isPosted ? "default" : "outline"}
                   size="sm"
                   className={cn(
-                    "ml-2",
                     isPosted && "bg-green-600 hover:bg-green-700"
                   )}
                   onClick={(e) => handleTogglePosted(date, e)}
@@ -271,6 +344,8 @@ export const ReportDateList = ({
                     photo={photo}
                     report={report}
                     onDownload={() => handleDownload(photo)}
+                    onDeletePhoto={() => handleDeletePhoto(photo.id)}
+                    isDeleting={deletingPhotoId === photo.id}
                   />
                 ))
               )}
@@ -303,17 +378,26 @@ interface ReportCardProps {
   photo: Photo;
   report: Report;
   onDownload: () => void;
+  onDeletePhoto: () => void;
+  isDeleting: boolean;
 }
 
 const ReportCard = ({
   photo,
   report,
   onDownload,
+  onDeletePhoto,
+  isDeleting,
 }: ReportCardProps) => {
   const time = format(new Date(report.createdAt), "HH:mm");
 
   return (
-    <div className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-md transition-shadow">
+    <div
+      className={cn(
+        "group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-md transition-shadow",
+        isDeleting && "opacity-50 pointer-events-none"
+      )}
+    >
       {/* 画像 */}
       <div className="h-40 relative">
         <LazyImage
@@ -326,13 +410,40 @@ const ReportCard = ({
         <div className="absolute top-2 right-2 bg-black/50 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm">
           {time}
         </div>
-        {/* ダウンロードボタン（ホバー時表示） */}
-        <button
-          onClick={onDownload}
-          className="absolute bottom-2 right-2 bg-white/90 dark:bg-slate-800/90 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white dark:hover:bg-slate-700"
-        >
-          <Download className="size-4 text-slate-600 dark:text-slate-300" />
-        </button>
+        {/* アクションボタン（ホバー時表示） */}
+        <div className="absolute bottom-2 right-2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button className="bg-white/90 dark:bg-slate-800/90 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30">
+                <Trash2 className="size-4 text-red-500" />
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>この写真を削除しますか？</AlertDialogTitle>
+                <AlertDialogDescription>
+                  「{photo.title}」を削除します。
+                  この操作は元に戻せません。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>キャンセル</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={onDeletePhoto}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  削除する
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <button
+            onClick={onDownload}
+            className="bg-white/90 dark:bg-slate-800/90 p-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-700"
+          >
+            <Download className="size-4 text-slate-600 dark:text-slate-300" />
+          </button>
+        </div>
       </div>
 
       {/* コンテンツ */}
