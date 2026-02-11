@@ -13,6 +13,7 @@ import {
   PhotoTimeline,
   ReportDateList,
   ProjectStatusToggle,
+  ProjectDeleteButton,
 } from "@/components/admin";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -158,8 +159,9 @@ const ProjectDetailPage = async ({ params }: ProjectDetailPageProps) => {
         </div>
 
         {/* アクションボタン */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-shrink-0">
           <ProjectStatusToggle projectId={id} currentStatus={status} />
+          <ProjectDeleteButton projectId={id} projectName={project.name} />
         </div>
       </div>
 
