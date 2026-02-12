@@ -142,6 +142,7 @@ export const getProjectWithPhotos = async (projectId: string) => {
       reportId: report.id,
       user: report.user,
       reportCreatedAt: report.createdAt,
+      reportSummary: report.summary,
     }))
   );
 

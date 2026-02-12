@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/actions/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { ThemeSelector } from "@/components/shared/theme-selector";
 
 const SettingsPage = async () => {
   const user = await getCurrentUser();
@@ -36,6 +37,16 @@ const SettingsPage = async () => {
               <p className="text-muted-foreground">{user?.email}</p>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* 外観 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">外観</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ThemeSelector />
         </CardContent>
       </Card>
 

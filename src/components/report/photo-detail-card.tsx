@@ -132,7 +132,7 @@ export const PhotoDetailCard = ({
           {/* コメント */}
           <div className="space-y-1">
             <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              コメント
+              コメント <span className="text-red-500">*</span>
             </Label>
             <Textarea
               value={data.comment}
@@ -140,7 +140,10 @@ export const PhotoDetailCard = ({
               placeholder="詳細や観察点を記入..."
               rows={2}
               maxLength={1000}
-              className="w-full rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900"
+              className={cn(
+                "w-full rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900",
+                errors?.comment && "border-red-500 border-2"
+              )}
             />
             {errors?.comment && (
               <p className="text-xs text-red-500">{errors.comment}</p>
