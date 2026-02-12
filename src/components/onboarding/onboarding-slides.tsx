@@ -15,6 +15,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+const ANIMATION_DURATION = 250;
+const ANIMATION_LOCK_BUFFER = 50;
+
 interface Slide {
   icon: LucideIcon;
   title: string;
@@ -77,6 +80,7 @@ export function OnboardingSlides() {
   const [direction, setDirection] = useState<"next" | "prev">("next");
   const [isAnimating, setIsAnimating] = useState(false);
   const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
 
   const isFirstSlide = currentIndex === 0;
   const isLastSlide = currentIndex === slides.length - 1;
@@ -84,7 +88,10 @@ export function OnboardingSlides() {
   // Reset animation state after transition
   useEffect(() => {
     if (isAnimating) {
-      const timer = setTimeout(() => setIsAnimating(false), 300);
+      const timer = setTimeout(
+        () => setIsAnimating(false),
+        ANIMATION_DURATION + ANIMATION_LOCK_BUFFER
+      );
       return () => clearTimeout(timer);
     }
   }, [isAnimating]);
@@ -107,22 +114,42 @@ export function OnboardingSlides() {
     if (!isFirstSlide) goTo(currentIndex - 1);
   }, [isFirstSlide, currentIndex, goTo]);
 
+  const goToLast = useCallback(() => {
+    goTo(slides.length - 1);
+  }, [goTo]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") goNext();
+      if (e.key === "ArrowLeft") goPrev();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [goNext, goPrev]);
+
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
   }, []);
 
   const handleTouchEnd = useCallback(
     (e: React.TouchEvent) => {
-      if (touchStartX.current === null) return;
-      const diff = touchStartX.current - e.changedTouches[0].clientX;
+      if (touchStartX.current === null || touchStartY.current === null) return;
+      const diffX = touchStartX.current - e.changedTouches[0].clientX;
+      const diffY = touchStartY.current - e.changedTouches[0].clientY;
       const threshold = 50;
 
-      if (diff > threshold && !isLastSlide) {
-        goNext();
-      } else if (diff < -threshold && !isFirstSlide) {
-        goPrev();
+      // Only trigger if horizontal movement dominates
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > threshold) {
+        if (diffX > 0 && !isLastSlide) {
+          goNext();
+        } else if (diffX < 0 && !isFirstSlide) {
+          goPrev();
+        }
       }
       touchStartX.current = null;
+      touchStartY.current = null;
     },
     [goNext, goPrev, isLastSlide, isFirstSlide]
   );
@@ -139,30 +166,31 @@ export function OnboardingSlides() {
       {/* Background decorations */}
       <div className="pointer-events-none absolute inset-0" aria-hidden="true">
         {/* Dot grid pattern */}
-        <div
-          className="absolute inset-0 opacity-[0.03] dark:opacity-[0.06]"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle, currentColor 1px, transparent 1px)",
-            backgroundSize: "24px 24px",
-          }}
-        />
+        <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.06] dot-grid-pattern" />
 
-        {/* Top-right gradient orb */}
-        <div
-          className={cn(
-            "absolute -top-20 -right-20 h-64 w-64 rounded-full blur-3xl transition-colors duration-700",
-            currentSlide.orbColors[0]
-          )}
-        />
-
-        {/* Bottom-left gradient orb */}
-        <div
-          className={cn(
-            "absolute -bottom-24 -left-24 h-72 w-72 rounded-full blur-3xl transition-colors duration-700",
-            currentSlide.orbColors[1]
-          )}
-        />
+        {/* Gradient orbs - opacity transition for GPU performance (avoids blur recomputation) */}
+        {slides.map((slide, i) => (
+          <div
+            key={i}
+            className={cn(
+              "absolute inset-0 transition-opacity duration-700",
+              i === currentIndex ? "opacity-100" : "opacity-0"
+            )}
+          >
+            <div
+              className={cn(
+                "absolute -top-20 -right-20 h-64 w-64 rounded-full blur-3xl",
+                slide.orbColors[0]
+              )}
+            />
+            <div
+              className={cn(
+                "absolute -bottom-24 -left-24 h-72 w-72 rounded-full blur-3xl",
+                slide.orbColors[1]
+              )}
+            />
+          </div>
+        ))}
 
         {/* Center subtle ring */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-80 w-80 rounded-full border border-primary/5" />
@@ -173,7 +201,7 @@ export function OnboardingSlides() {
         {!isLastSlide ? (
           <button
             type="button"
-            onClick={() => goTo(slides.length - 1)}
+            onClick={goToLast}
             className="min-h-11 min-w-11 flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
           >
             スキップ
@@ -190,13 +218,20 @@ export function OnboardingSlides() {
       </div>
 
       {/* Slide content with animation */}
-      <div className="flex flex-1 flex-col items-center justify-center text-center gap-6 overflow-hidden">
+      <div
+        className="flex flex-1 flex-col items-center justify-center text-center gap-6 overflow-hidden"
+        role="tabpanel"
+        aria-labelledby={`slide-tab-${currentIndex}`}
+        aria-live="polite"
+        aria-atomic="true"
+      >
         <div
           key={currentIndex}
           className={cn(
             "flex flex-col items-center gap-6 w-full",
-            "motion-safe:animate-slide-in",
-            direction === "prev" && "motion-safe:direction-reverse"
+            direction === "next"
+              ? "animate-slide-in-right"
+              : "animate-slide-in-left"
           )}
         >
           {/* Icon with gradient background */}
@@ -209,9 +244,9 @@ export function OnboardingSlides() {
             <Icon className="h-12 w-12 text-primary" strokeWidth={1.5} />
           </div>
 
-          <h1 className="text-2xl font-bold leading-tight whitespace-pre-line tracking-tight">
+          <h2 className="text-2xl font-bold leading-tight whitespace-pre-line tracking-tight">
             {currentSlide.title}
-          </h1>
+          </h2>
 
           <p className="text-muted-foreground leading-relaxed whitespace-pre-line text-[15px]">
             {currentSlide.description}
@@ -244,13 +279,14 @@ export function OnboardingSlides() {
         {slides.map((slide, index) => (
           <button
             key={index}
+            id={`slide-tab-${index}`}
             type="button"
             role="tab"
             aria-selected={index === currentIndex}
             aria-label={`スライド ${index + 1}: ${slide.title}`}
             onClick={() => goTo(index)}
             className={cn(
-              "h-2 rounded-full transition-all duration-300 cursor-pointer min-w-11 min-h-11 flex items-center justify-center p-0",
+              "rounded-full transition-all duration-300 cursor-pointer min-w-11 min-h-11 flex items-center justify-center p-0",
               "after:block after:h-2 after:rounded-full after:transition-all after:duration-300",
               index === currentIndex
                 ? "after:w-6 after:bg-primary"
