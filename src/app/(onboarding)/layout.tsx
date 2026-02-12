@@ -23,7 +23,7 @@ const OnboardingLayout = async ({
   }
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-background max-w-[480px] mx-auto">
+    <div className="flex min-h-screen w-full flex-col bg-background max-w-[480px] mx-auto overflow-hidden">
       <main className="flex flex-1 flex-col">{children}</main>
     </div>
   );

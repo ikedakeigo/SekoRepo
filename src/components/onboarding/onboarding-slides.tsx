@@ -21,6 +21,8 @@ interface Slide {
   description: string;
   highlights?: string[];
   accentColor: string;
+  /** Background orb colors [topRight, bottomLeft] */
+  orbColors: [string, string];
 }
 
 const slides: Slide[] = [
@@ -30,6 +32,7 @@ const slides: Slide[] = [
     description:
       "現場の写真とコメントをかんたんに記録・管理。\n投稿用コンテンツの作成をサポートするアプリです。",
     accentColor: "from-primary/20 to-primary/5",
+    orbColors: ["bg-primary/15", "bg-violet-400/10"],
   },
   {
     icon: Camera,
@@ -41,6 +44,7 @@ const slides: Slide[] = [
       "自動で圧縮するので通信量も安心",
     ],
     accentColor: "from-blue-500/20 to-blue-500/5",
+    orbColors: ["bg-blue-400/15", "bg-cyan-400/10"],
   },
   {
     icon: MessageSquareText,
@@ -52,6 +56,7 @@ const slides: Slide[] = [
       "お客様の声も残せる（アフター写真）",
     ],
     accentColor: "from-amber-500/20 to-amber-500/5",
+    orbColors: ["bg-amber-400/15", "bg-orange-400/10"],
   },
   {
     icon: FolderOpen,
@@ -63,6 +68,7 @@ const slides: Slide[] = [
       "送信履歴はいつでも確認",
     ],
     accentColor: "from-emerald-500/20 to-emerald-500/5",
+    orbColors: ["bg-emerald-400/15", "bg-teal-400/10"],
   },
 ];
 
@@ -126,10 +132,42 @@ export function OnboardingSlides() {
 
   return (
     <div
-      className="flex flex-1 flex-col px-6 py-8 select-none"
+      className="relative flex flex-1 flex-col px-6 py-8 select-none overflow-hidden"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
+      {/* Background decorations */}
+      <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+        {/* Dot grid pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.03] dark:opacity-[0.06]"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle, currentColor 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+          }}
+        />
+
+        {/* Top-right gradient orb */}
+        <div
+          className={cn(
+            "absolute -top-20 -right-20 h-64 w-64 rounded-full blur-3xl transition-colors duration-700",
+            currentSlide.orbColors[0]
+          )}
+        />
+
+        {/* Bottom-left gradient orb */}
+        <div
+          className={cn(
+            "absolute -bottom-24 -left-24 h-72 w-72 rounded-full blur-3xl transition-colors duration-700",
+            currentSlide.orbColors[1]
+          )}
+        />
+
+        {/* Center subtle ring */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-80 w-80 rounded-full border border-primary/5" />
+      </div>
+
       {/* Top: Skip / Login links */}
       <div className="flex items-center justify-between">
         {!isLastSlide ? (
