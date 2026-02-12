@@ -148,6 +148,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
     name: user.name,
     role: user.role as UserRole,
     avatarUrl: user.avatarUrl,
+    onboardingCompleted: user.onboardingCompleted,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
