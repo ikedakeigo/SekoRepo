@@ -123,3 +123,41 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Onboarding slide animations */
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .animate-slide-in-right {
+    animation: slide-in-right 250ms ease-out;
+  }
+  .animate-slide-in-left {
+    animation: slide-in-left 250ms ease-out;
+  }
+}
+
+/* Onboarding dot grid background */
+.dot-grid-pattern {
+  background-image: radial-gradient(circle, currentColor 1px, transparent 1px);
+  background-size: 24px 24px;
+}

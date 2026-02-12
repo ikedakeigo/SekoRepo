@@ -7,7 +7,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 /** 認証不要なパス */
-const PUBLIC_PATHS = ["/login", "/signup"];
+const PUBLIC_PATHS = ["/login", "/signup", "/onboarding"];
 
 /** 管理者専用パス */
 const ADMIN_PATHS = ["/dashboard", "/projects", "/settings"];
