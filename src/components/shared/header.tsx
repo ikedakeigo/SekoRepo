@@ -15,10 +15,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Settings, LogOut, User } from "lucide-react";
+import { Settings, LogOut, User, Sun, Moon, Monitor } from "lucide-react";
+import { useTheme } from "next-themes";
 import { FullScreenLoading } from "@/components/ui/full-screen-loading";
 import type { User as UserType } from "@/types";
 
@@ -31,6 +35,7 @@ interface HeaderProps {
  */
 export const Header = ({ user }: HeaderProps) => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { setTheme } = useTheme();
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -89,6 +94,26 @@ export const Header = ({ user }: HeaderProps) => {
                 設定
               </Link>
             </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="cursor-pointer">
+                <Sun className="mr-2 size-4" />
+                テーマ
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem onClick={() => setTheme("light")} className="cursor-pointer">
+                  <Sun className="mr-2 size-4" />
+                  ライト
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTheme("dark")} className="cursor-pointer">
+                  <Moon className="mr-2 size-4" />
+                  ダーク
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTheme("system")} className="cursor-pointer">
+                  <Monitor className="mr-2 size-4" />
+                  システム
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="cursor-pointer text-red-600"
