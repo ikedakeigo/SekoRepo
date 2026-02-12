@@ -211,9 +211,15 @@ export const LoginForm = () => {
           </Button>
         </form>
       </CardContent>
-      <CardFooter className="flex justify-center">
+      <CardFooter className="flex flex-col items-center gap-2">
         <p className="text-sm text-muted-foreground">
-          アカウントをお持ちでない方は{" "}
+          はじめての方は{" "}
+          <Link href="/onboarding" className="text-primary hover:underline">
+            アプリ紹介を見る
+          </Link>
+        </p>
+        <p className="text-xs text-muted-foreground">
+          または{" "}
           <Link href="/signup" className="text-primary hover:underline">
             新規登録
           </Link>
