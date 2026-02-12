@@ -17,6 +17,7 @@ export interface User {
   name: string;
   role: UserRole;
   avatarUrl?: string | null;
+  onboardingCompleted: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
