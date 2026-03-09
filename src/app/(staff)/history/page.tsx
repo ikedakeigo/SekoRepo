@@ -3,7 +3,7 @@
  */
 
 import Link from "next/link";
-import { LazyImage } from "@/components/shared";
+import { LazyImage, PullToRefresh } from "@/components/shared";
 import { getUserReports } from "@/actions/reports";
 import { Card, CardContent } from "@/components/ui/card";
 import { Camera, ChevronRight } from "lucide-react";
@@ -14,7 +14,7 @@ const HistoryPage = async () => {
   const reports = await getUserReports(50);
 
   return (
-    <div className="p-4 space-y-4">
+    <PullToRefresh className="p-4 space-y-4">
       <h1 className="text-xl font-bold">送信履歴</h1>
 
       {reports.length > 0 ? (
@@ -69,7 +69,7 @@ const HistoryPage = async () => {
           <p className="text-muted-foreground">まだ送信履歴がありません</p>
         </div>
       )}
-    </div>
+    </PullToRefresh>
   );
 };
 

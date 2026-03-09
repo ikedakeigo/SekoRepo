@@ -3,7 +3,7 @@
  */
 
 import Link from "next/link";
-import { LazyImage } from "@/components/shared";
+import { LazyImage, PullToRefresh } from "@/components/shared";
 import { getCurrentUser } from "@/actions/auth";
 import { getUserReports } from "@/actions/reports";
 import { Camera, ChevronRight, Clock } from "lucide-react";
@@ -18,7 +18,7 @@ const HomePage = async () => {
   const latestProject = recentReports.length > 0 ? recentReports[0] : null;
 
   return (
-    <div className="flex-1 pb-24">
+    <PullToRefresh className="flex-1 pb-24">
       {/* ウェルカムセクション */}
       <div className="flex p-6">
         <div className="flex w-full flex-col gap-4">
@@ -121,7 +121,7 @@ const HomePage = async () => {
           )}
         </div>
       </div>
-    </div>
+    </PullToRefresh>
   );
 };
 

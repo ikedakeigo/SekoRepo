@@ -6,6 +6,7 @@ export { Header } from "./header";
 export { MobileNav } from "./mobile-nav";
 export { Sidebar } from "./sidebar";
 export { LazyImage } from "./lazy-image";
+export { PullToRefresh } from "./pull-to-refresh";
 export {
   StaffHomePageSkeleton,
   DashboardSkeleton,
