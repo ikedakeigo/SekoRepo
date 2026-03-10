@@ -7,6 +7,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { LazyImage } from "@/components/shared";
+import { getOptimizedImageUrl } from "@/lib/supabase/image-utils";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -71,10 +72,11 @@ export const PhotoCard = ({
         <div className="flex gap-4">
           {/* 写真 */}
           <LazyImage
-            src={photo.photoUrl}
+            src={getOptimizedImageUrl(photo.photoUrl, "thumbnail")}
             alt={photo.title}
             fill
             className="object-cover"
+            sizes="96px"
             containerClassName="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0"
           />
 

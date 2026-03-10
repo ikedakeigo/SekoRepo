@@ -10,6 +10,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { LazyImage } from "@/components/shared";
+import { getOptimizedImageUrl } from "@/lib/supabase/image-utils";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,10 +62,11 @@ export const PhotoEditCard = ({
 
         {/* サムネイル */}
         <LazyImage
-          src={data.photoUrl}
+          src={getOptimizedImageUrl(data.photoUrl, "thumbnail")}
           alt={data.title || `写真 ${index + 1}`}
           fill
           className="object-cover"
+          sizes="80px"
           containerClassName="w-20 h-20 rounded-lg overflow-hidden bg-muted"
         />
 
