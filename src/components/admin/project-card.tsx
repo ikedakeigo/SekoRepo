@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { FileText, Calendar, MoreVertical } from "lucide-react";
 import { LazyImage } from "@/components/shared";
-import { getOptimizedImageUrl } from "@/lib/supabase/storage.client";
+import { getOptimizedImageUrl } from "@/lib/supabase/image-utils";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { cn } from "@/lib/utils";

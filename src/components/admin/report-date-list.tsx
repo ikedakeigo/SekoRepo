@@ -26,7 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LazyImage } from "@/components/shared";
-import { getOptimizedImageUrl } from "@/lib/supabase/storage.client";
+import { getOptimizedImageUrl } from "@/lib/supabase/image-utils";
 import {
   ChevronDown,
   User,

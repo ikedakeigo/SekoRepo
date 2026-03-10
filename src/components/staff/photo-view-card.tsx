@@ -5,7 +5,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { LazyImage } from "@/components/shared";
-import { getOptimizedImageUrl } from "@/lib/supabase/storage.client";
+import { getOptimizedImageUrl } from "@/lib/supabase/image-utils";
 import { Badge } from "@/components/ui/badge";
 import { PHOTO_TYPE_LABELS } from "@/types";
 import type { PhotoType } from "@/types";

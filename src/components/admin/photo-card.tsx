@@ -7,7 +7,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { LazyImage } from "@/components/shared";
-import { getOptimizedImageUrl } from "@/lib/supabase/storage.client";
+import { getOptimizedImageUrl } from "@/lib/supabase/image-utils";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,

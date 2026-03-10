@@ -10,7 +10,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { LazyImage } from "@/components/shared";
-import { getOptimizedImageUrl } from "@/lib/supabase/storage.client";
+import { getOptimizedImageUrl } from "@/lib/supabase/image-utils";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

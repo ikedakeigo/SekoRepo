@@ -5,7 +5,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LazyImage } from "@/components/shared";
-import { getOptimizedImageUrl } from "@/lib/supabase/storage";
+import { getOptimizedImageUrl } from "@/lib/supabase/image-utils";
 import {
   getProjectWithPhotos,
   getProjectPostedDates,
