@@ -16,21 +16,18 @@ import type { ProjectStatus } from "@/types";
 export const getProjects = async () => {
   await requireAuth();
 
+  // プロジェクト基本情報 + レポート数を取得（reportsの中身は不要）
   const projects = await prisma.project.findMany({
-    include: {
+    select: {
+      id: true,
+      name: true,
+      location: true,
+      description: true,
+      status: true,
+      createdAt: true,
+      updatedAt: true,
       _count: {
-        select: {
-          reports: true,
-        },
-      },
-      reports: {
-        include: {
-          _count: {
-            select: {
-              photos: true,
-            },
-          },
-        },
+        select: { reports: true },
       },
     },
     orderBy: {
@@ -38,13 +35,28 @@ export const getProjects = async () => {
     },
   });
 
+  // レポート単位で写真数を取得（projectIdも含めて1クエリで完結）
+  const reportPhotoCounts = await prisma.report.findMany({
+    where: { projectId: { in: projects.map((p) => p.id) } },
+    select: {
+      projectId: true,
+      _count: { select: { photos: true } },
+    },
+  });
+
+  // projectId → 写真数の合計を計算
+  const projectPhotoCountMap = new Map<string, number>();
+  for (const r of reportPhotoCounts) {
+    projectPhotoCountMap.set(
+      r.projectId,
+      (projectPhotoCountMap.get(r.projectId) ?? 0) + r._count.photos
+    );
+  }
+
   return projects.map((project) => ({
     ...project,
     reportCount: project._count.reports,
-    photoCount: project.reports.reduce(
-      (sum, report) => sum + report._count.photos,
-      0
-    ),
+    photoCount: projectPhotoCountMap.get(project.id) ?? 0,
   }));
 };
 
