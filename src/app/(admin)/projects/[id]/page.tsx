@@ -5,6 +5,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LazyImage } from "@/components/shared";
+import { getOptimizedImageUrl } from "@/lib/supabase/storage";
 import {
   getProjectWithPhotos,
   getProjectPostedDates,
@@ -59,21 +60,19 @@ const STATUS_CONFIG: Record<
 const ProjectDetailPage = async ({ params }: ProjectDetailPageProps) => {
   const { id } = await params;
 
-  let project;
-  let postedDates: string[] = [];
-  try {
-    project = await getProjectWithPhotos(id);
-  } catch (error) {
-    console.error("getProjectWithPhotos error:", error);
+  // 独立した2つのfetchを並列実行
+  const [projectResult, postedDatesResult] = await Promise.allSettled([
+    getProjectWithPhotos(id),
+    getProjectPostedDates(id),
+  ]);
+
+  if (projectResult.status === "rejected") {
     notFound();
   }
 
-  try {
-    postedDates = await getProjectPostedDates(id);
-  } catch (error) {
-    console.error("getProjectPostedDates error:", error);
-    postedDates = [];
-  }
+  const project = projectResult.value;
+  const postedDates =
+    postedDatesResult.status === "fulfilled" ? postedDatesResult.value : [];
 
   const status = project.status as ProjectStatus;
   const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.active;
@@ -102,10 +101,11 @@ const ProjectDetailPage = async ({ params }: ProjectDetailPageProps) => {
           <div className="w-32 h-32 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0 border border-slate-200 dark:border-slate-700">
             {thumbnailUrl ? (
               <LazyImage
-                src={thumbnailUrl}
+                src={getOptimizedImageUrl(thumbnailUrl, "thumbnail")}
                 alt={project.name}
                 fill
                 className="object-cover"
+                sizes="128px"
                 containerClassName="w-full h-full"
               />
             ) : (
