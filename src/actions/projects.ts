@@ -35,28 +35,51 @@ export const getProjects = async () => {
     },
   });
 
-  // レポート単位で写真数を取得（projectIdも含めて1クエリで完結）
-  const reportPhotoCounts = await prisma.report.findMany({
-    where: { projectId: { in: projects.map((p) => p.id) } },
+  const projectIds = projects.map((p) => p.id);
+
+  // レポート単位で写真数 + 最新写真1枚を取得（1クエリで完結）
+  const reportsWithLatestPhoto = await prisma.report.findMany({
+    where: { projectId: { in: projectIds } },
     select: {
       projectId: true,
       _count: { select: { photos: true } },
+      photos: {
+        select: { photoUrl: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
     },
   });
 
-  // projectId → 写真数の合計を計算
+  // projectId → 写真数の合計 & 最新写真のサムネイルURLを計算
   const projectPhotoCountMap = new Map<string, number>();
-  for (const r of reportPhotoCounts) {
+  const projectThumbnailMap = new Map<
+    string,
+    { url: string; createdAt: Date }
+  >();
+  for (const r of reportsWithLatestPhoto) {
     projectPhotoCountMap.set(
       r.projectId,
       (projectPhotoCountMap.get(r.projectId) ?? 0) + r._count.photos
     );
+    if (r.photos.length > 0) {
+      const photo = r.photos[0];
+      const existing = projectThumbnailMap.get(r.projectId);
+      // photo.createdAt 基準で最新を選定（古いレポートへの追加写真も反映）
+      if (!existing || photo.createdAt > existing.createdAt) {
+        projectThumbnailMap.set(r.projectId, {
+          url: photo.photoUrl,
+          createdAt: photo.createdAt,
+        });
+      }
+    }
   }
 
   return projects.map((project) => ({
     ...project,
     reportCount: project._count.reports,
     photoCount: projectPhotoCountMap.get(project.id) ?? 0,
+    thumbnailUrl: projectThumbnailMap.get(project.id)?.url ?? null,
   }));
 };
 

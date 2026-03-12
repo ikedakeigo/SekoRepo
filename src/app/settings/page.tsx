@@ -1,5 +1,5 @@
 /**
- * 設定画面
+ * 設定画面（スタッフ・管理者共用）
  */
 
 import { getCurrentUser } from "@/actions/auth";
@@ -7,12 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ThemeSelector } from "@/components/shared/theme-selector";
+import { LogoutButton } from "@/components/shared/logout-button";
 
 const SettingsPage = async () => {
   const user = await getCurrentUser();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 md:p-0">
       <h1 className="text-2xl font-bold">設定</h1>
 
       {/* プロフィール */}
@@ -47,6 +48,16 @@ const SettingsPage = async () => {
         </CardHeader>
         <CardContent>
           <ThemeSelector />
+        </CardContent>
+      </Card>
+
+      {/* アカウント操作 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">アカウント</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <LogoutButton />
         </CardContent>
       </Card>
 
