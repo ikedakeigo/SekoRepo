@@ -10,7 +10,7 @@ import { NextResponse, type NextRequest } from "next/server";
 const PUBLIC_PATHS = ["/login", "/signup", "/onboarding"];
 
 /** 管理者専用パス */
-const ADMIN_PATHS = ["/dashboard", "/projects", "/settings"];
+const ADMIN_PATHS = ["/dashboard", "/projects"];
 
 /**
  * セッション更新と認証チェック

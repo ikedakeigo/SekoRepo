@@ -5,6 +5,7 @@
 export { StatsCards } from "./stats-cards";
 export { ProjectCard, AddProjectCard } from "./project-card";
 export { ProjectsHeader } from "./projects-header";
+export { ProjectsContent } from "./projects-content";
 export { PhotoCard } from "./photo-card";
 export { PhotoTimeline } from "./photo-timeline";
 export { ReportDateList } from "./report-date-list";
