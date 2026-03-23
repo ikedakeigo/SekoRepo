@@ -18,6 +18,13 @@ const ADMIN_PATHS = ["/dashboard", "/projects"];
 export const updateSession = async (request: NextRequest) => {
   let response = NextResponse.next({ request });
 
+  const pathname = request.nextUrl.pathname;
+
+  // 公開パスの場合はセッション更新不要（ログインページ以外）
+  if (PUBLIC_PATHS.some((path) => pathname.startsWith(path)) && !pathname.startsWith("/login")) {
+    return response;
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -42,13 +49,10 @@ export const updateSession = async (request: NextRequest) => {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const pathname = request.nextUrl.pathname;
-
-  // 公開パスの場合
-  if (PUBLIC_PATHS.some((path) => pathname.startsWith(path))) {
-    // 認証済みでログインページにアクセスした場合はリダイレクト
-    if (user && pathname.startsWith("/login")) {
-      // ユーザーのロールを取得
+  // ログインページの場合
+  if (pathname.startsWith("/login")) {
+    // 認証済みならリダイレクト
+    if (user) {
       const { data: profile } = await supabase
         .from("users")
         .select("role")
@@ -59,6 +63,7 @@ export const updateSession = async (request: NextRequest) => {
         profile?.role === "admin" ? "/dashboard" : "/";
       return NextResponse.redirect(new URL(redirectUrl, request.url));
     }
+    // 未認証ならそのままログインページを表示
     return response;
   }
 
