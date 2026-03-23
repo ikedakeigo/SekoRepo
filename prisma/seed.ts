@@ -41,6 +41,19 @@ const seedUsers: SeedUser[] = [
     name: "スタッフテスト",
     role: "staff",
   },
+  // E2Eテスト用アカウント
+  {
+    email: "admin-test@example.com",
+    password: "testpass1",
+    name: "テスト管理者",
+    role: "admin",
+  },
+  {
+    email: "staff-test@example.com",
+    password: "testpass1",
+    name: "テストスタッフ",
+    role: "staff",
+  },
 ];
 
 async function createUser(userData: SeedUser) {
@@ -132,6 +145,9 @@ async function main() {
   console.log("\nTest credentials:");
   console.log("  Admin: admin@example.com / password123");
   console.log("  Staff: staff@example.com / password123");
+  console.log("\nE2E test credentials:");
+  console.log("  Admin: admin-test@example.com / testpass1");
+  console.log("  Staff: staff-test@example.com / testpass1");
 }
 
 main()
