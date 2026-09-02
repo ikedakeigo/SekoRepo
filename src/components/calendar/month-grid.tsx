@@ -15,6 +15,8 @@ import {
 } from "@/lib/calendar/event-layout";
 import { cn } from "@/lib/utils";
 
+/** 日付数字ブロックの高さ（pt-0.5 + h-5）: セル上端から数字直下までの px */
+const DAY_NUMBER_BLOCK_HEIGHT = 22;
 /** バーの縦位置: セル上端からの開始位置と1レーンの高さ（px） */
 const BAR_TOP_OFFSET = 24;
 const BAR_LANE_HEIGHT = 14.5;
@@ -92,7 +94,8 @@ export function MonthGrid({
                   type="button"
                   onClick={() => onSelectDay(day.key)}
                   className={cn(
-                    "relative overflow-hidden border-r border-slate-200 text-left last:border-r-0 dark:border-slate-800",
+                    // button は既定で内容を上下中央に寄せるため、flex-col で上詰めにする
+                    "relative flex flex-col overflow-hidden border-r border-slate-200 text-left last:border-r-0 dark:border-slate-800",
                     !inMonth && "opacity-40",
                     isSelected &&
                       "bg-slate-100 ring-2 ring-inset ring-slate-900 dark:bg-slate-800 dark:ring-slate-100"
@@ -112,7 +115,13 @@ export function MonthGrid({
                   </div>
                   <div
                     className="flex flex-col gap-[1.5px] px-0.5"
-                    style={{ marginTop: `${laneCount * BAR_LANE_HEIGHT}px` }}
+                    style={{
+                      marginTop: `${
+                        BAR_TOP_OFFSET -
+                        DAY_NUMBER_BLOCK_HEIGHT +
+                        laneCount * BAR_LANE_HEIGHT
+                      }px`,
+                    }}
                   >
                     {shown.map((event) => (
                       <span
@@ -136,7 +145,7 @@ export function MonthGrid({
                       </span>
                     ))}
                     {extra > 0 && (
-                      <span className="pl-[3px] text-[9px] font-bold leading-3 text-slate-500 dark:text-slate-400">
+                      <span className="pl-[3px] text-[9px] font-bold leading-[9px] text-slate-500 dark:text-slate-400">
                         +{extra}
                       </span>
                     )}
