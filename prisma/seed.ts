@@ -121,6 +121,28 @@ async function createUser(userData: SeedUser) {
   return user;
 }
 
+/** カレンダー予定ラベル（設計書 3.3） */
+const seedEventLabels = [
+  { name: "工事", color: "#F97316", sortOrder: 1 },
+  { name: "見積・下見", color: "#3B82F6", sortOrder: 2 },
+  { name: "打合せ", color: "#22C55E", sortOrder: 3 },
+  { name: "その他", color: "#6B7280", sortOrder: 4 },
+];
+
+async function createEventLabels() {
+  for (const label of seedEventLabels) {
+    const existing = await prisma.eventLabel.findFirst({
+      where: { name: label.name },
+    });
+    if (existing) {
+      console.log(`✓ Event label already exists: ${label.name}`);
+      continue;
+    }
+    await prisma.eventLabel.create({ data: label });
+    console.log(`✓ Created event label: ${label.name}`);
+  }
+}
+
 async function main() {
   console.log("🌱 Starting seed...\n");
 
@@ -140,6 +162,9 @@ async function main() {
       console.error(`✗ Failed to create user ${userData.email}:`, error);
     }
   }
+
+  // カレンダー予定ラベル作成
+  await createEventLabels();
 
   console.log("\n✅ Seed completed!");
   console.log("\nTest credentials:");

@@ -7,7 +7,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Send, History, Settings } from "lucide-react";
+import { Home, CalendarDays, Send, History, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** ナビゲーションアイテム */
@@ -16,6 +16,11 @@ const navItems = [
     href: "/",
     label: "ホーム",
     icon: Home,
+  },
+  {
+    href: "/calendar",
+    label: "カレンダー",
+    icon: CalendarDays,
   },
   {
     href: "/report/new",

@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   LayoutDashboard,
   Building2,
-  FileText,
+  CalendarDays,
   Settings,
   LogOut,
   HardHat,
@@ -29,6 +29,11 @@ const navItems = [
     href: "/dashboard",
     label: "ダッシュボード",
     icon: LayoutDashboard,
+  },
+  {
+    href: "/calendar",
+    label: "カレンダー",
+    icon: CalendarDays,
   },
   {
     href: "/projects",
