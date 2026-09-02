@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { ImageIcon } from "lucide-react";
@@ -29,7 +29,12 @@ interface LazyImageProps {
  * - エラー時: アイコンフォールバック
  * - Next.js Image Optimization を使用（remotePatterns で Supabase を許可済み）
  */
-export function LazyImage({
+export function LazyImage(props: LazyImageProps) {
+  // src変更時は key で再マウントし、読み込み状態をリセット
+  return <LazyImageInner key={props.src} {...props} />;
+}
+
+function LazyImageInner({
   src,
   alt,
   fill,
@@ -42,12 +47,6 @@ export function LazyImage({
 }: LazyImageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-
-  // src変更時に状態をリセット
-  useEffect(() => {
-    setIsLoading(true);
-    setHasError(false);
-  }, [src]);
 
   if (hasError) {
     return (

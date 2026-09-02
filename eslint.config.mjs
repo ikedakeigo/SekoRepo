@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Prisma 自動生成コード
+    "src/generated/**",
+    // ドキュメント・デザインプロトタイプ
+    "docs/**",
+    // Claude Code フックスクリプト
+    ".claude/**",
   ]),
 ]);
 

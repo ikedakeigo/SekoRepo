@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
 import { Sun, Moon, Monitor } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -11,11 +11,16 @@ const themes = [
   { value: "system", label: "システム", icon: Monitor },
 ] as const;
 
+const emptySubscribe = () => () => {};
+
 export function ThemeSelector() {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
+  // SSR中は false、ハイドレーション完了後に true（テーマ確定までプレースホルダー表示）
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
 
   if (!mounted) {
     return (

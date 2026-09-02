@@ -4,7 +4,7 @@
 
 "use server";
 
-import { requireAdmin } from "./auth";
+import { requireAdmin } from "@/lib/auth/session";
 import { getProjectWithPhotos } from "./projects";
 import { PHOTO_TYPE_LABELS } from "@/types";
 import { format, isSameDay, parseISO } from "date-fns";

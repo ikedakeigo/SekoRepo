@@ -12,6 +12,10 @@ import { ChevronRight, Camera } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
 
+/** 24時間以内に作成されたレポートかどうか */
+const isNewReport = (createdAt: Date) =>
+  new Date(createdAt).getTime() > Date.now() - 24 * 60 * 60 * 1000;
+
 const DashboardPage = async () => {
   const [stats, recentReports] = await Promise.all([
     getDashboardStats(),
@@ -62,6 +66,7 @@ const DashboardPage = async () => {
                             alt=""
                             fill
                             className="object-cover"
+                            sizes="40px"
                           />
                         </div>
                       ))}
@@ -78,8 +83,7 @@ const DashboardPage = async () => {
                         <p className="font-medium text-sm truncate">
                           {report.project.name}
                         </p>
-                        {new Date(report.createdAt).getTime() >
-                          Date.now() - 24 * 60 * 60 * 1000 && (
+                        {isNewReport(report.createdAt) && (
                           <Badge variant="destructive" className="text-xs">
                             NEW
                           </Badge>

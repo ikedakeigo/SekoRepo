@@ -14,6 +14,7 @@ test.describe("スタッフ - モバイルナビゲーション", () => {
 
   test("モバイルナビが表示される", async ({ page }) => {
     await expect(page.getByRole("link", { name: "ホーム" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "カレンダー" })).toBeVisible();
     await expect(page.getByRole("link", { name: "送信" })).toBeVisible();
     await expect(page.getByRole("link", { name: "履歴" })).toBeVisible();
     await expect(page.getByRole("link", { name: "設定" })).toBeVisible();
@@ -29,6 +30,11 @@ test.describe("スタッフ - モバイルナビゲーション", () => {
     await page.waitForLoadState("networkidle");
     await page.getByRole("link", { name: "ホーム" }).click();
     await expect(page).toHaveURL("/");
+  });
+
+  test("カレンダーリンクが正しく動作する", async ({ page }) => {
+    await page.getByRole("link", { name: "カレンダー" }).click();
+    await expect(page).toHaveURL(/\/calendar/);
   });
 
   test("送信リンクが正しく動作する", async ({ page }) => {
@@ -105,6 +111,12 @@ test.describe("管理者 - ナビゲーション", () => {
     await expect(page).toHaveURL(/\/dashboard/);
   });
 
+  test("カレンダーリンクが動作する", async ({ page }) => {
+    const calendarLink = page.getByRole("link", { name: "カレンダー" }).first();
+    await calendarLink.click();
+    await expect(page).toHaveURL(/\/calendar/);
+  });
+
   test("案件一覧リンクが動作する", async ({ page }) => {
     const projectsLink = page.getByRole("link", { name: "案件一覧" }).first();
     await projectsLink.click();
@@ -143,5 +155,36 @@ test.describe("ホームページ - スタッフ", () => {
     if (hasReports) {
       await expect(recentReports.first()).toBeVisible();
     }
+  });
+});
+
+test.describe("カレンダー画面 - スタッフ", () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAsStaff(page);
+  });
+
+  test("カレンダー画面が正しく表示される", async ({ page }) => {
+    await page.goto("/calendar");
+    await page.waitForLoadState("networkidle");
+
+    // 月ヘッダー（「今日」ボタン）と曜日行が表示される
+    await expect(page.getByRole("button", { name: "今日" })).toBeVisible();
+    await expect(page.getByText("日", { exact: true }).first()).toBeVisible();
+
+    await page.screenshot({
+      path: screenshotPath("navigation", "04_カレンダー画面"),
+      fullPage: true,
+    });
+  });
+
+  test("日別リストと予定作成ボタンが表示される", async ({ page }) => {
+    await page.goto("/calendar");
+    await page.waitForLoadState("networkidle");
+
+    // 日別リストのヘッダー（「n件の予定」）と FAB
+    await expect(page.getByText(/件の予定/)).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "予定を作成" })
+    ).toBeVisible();
   });
 });

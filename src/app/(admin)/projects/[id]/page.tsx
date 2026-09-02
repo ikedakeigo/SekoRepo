@@ -5,7 +5,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LazyImage } from "@/components/shared";
-import { getOptimizedImageUrl } from "@/lib/supabase/image-utils";
 import {
   getProjectWithPhotos,
   getProjectPostedDates,
@@ -101,7 +100,7 @@ const ProjectDetailPage = async ({ params }: ProjectDetailPageProps) => {
           <div className="w-32 h-32 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-hidden flex-shrink-0 border border-slate-200 dark:border-slate-700">
             {thumbnailUrl ? (
               <LazyImage
-                src={getOptimizedImageUrl(thumbnailUrl, "thumbnail")}
+                src={thumbnailUrl}
                 alt={project.name}
                 fill
                 className="object-cover"
