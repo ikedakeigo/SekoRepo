@@ -5,7 +5,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "./auth";
+import { requireAuth } from "@/lib/auth/session";
 import { revalidatePath } from "next/cache";
 import { eventInputSchema } from "@/lib/validations/event";
 import type {

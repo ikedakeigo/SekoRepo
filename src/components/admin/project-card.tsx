@@ -8,7 +8,6 @@
 import Link from "next/link";
 import { FileText, Calendar, MoreVertical } from "lucide-react";
 import { LazyImage } from "@/components/shared";
-import { getOptimizedImageUrl } from "@/lib/supabase/image-utils";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -64,7 +63,7 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
         <div className="h-40 relative overflow-hidden bg-slate-100 dark:bg-slate-700">
           {project.thumbnailUrl ? (
             <LazyImage
-              src={getOptimizedImageUrl(project.thumbnailUrl, "thumbnail")}
+              src={project.thumbnailUrl}
               alt={project.name}
               fill
               className="object-cover"

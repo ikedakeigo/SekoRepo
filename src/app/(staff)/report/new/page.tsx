@@ -3,7 +3,7 @@
  */
 
 import { getActiveProjects } from "@/actions/projects";
-import { getCurrentUser } from "@/actions/auth";
+import { getCurrentUser } from "@/lib/auth/session";
 import { ReportForm } from "@/components/report";
 import { redirect } from "next/navigation";
 

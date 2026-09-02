@@ -26,7 +26,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LazyImage } from "@/components/shared";
-import { getOptimizedImageUrl } from "@/lib/supabase/image-utils";
 import {
   ChevronDown,
   User,
@@ -504,7 +503,7 @@ const ReportCard = ({
       {/* 画像（正方形） */}
       <div className="aspect-square relative">
         <LazyImage
-          src={getOptimizedImageUrl(photo.photoUrl, "thumbnail")}
+          src={photo.photoUrl}
           alt={photo.title}
           fill
           className="object-cover"

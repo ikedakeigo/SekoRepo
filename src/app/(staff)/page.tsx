@@ -4,7 +4,7 @@
 
 import Link from "next/link";
 import { LazyImage, PullToRefresh } from "@/components/shared";
-import { getCurrentUser } from "@/actions/auth";
+import { getCurrentUser } from "@/lib/auth/session";
 import { getUserReports } from "@/actions/reports";
 import { Camera, ChevronRight, Clock } from "lucide-react";
 import { format } from "date-fns";
@@ -29,6 +29,7 @@ const HomePage = async () => {
                 alt="現場写真"
                 fill
                 className="object-cover"
+                sizes="80px"
                 containerClassName="min-h-20 w-20 rounded-xl overflow-hidden shadow-sm"
               />
             ) : (
@@ -86,6 +87,7 @@ const HomePage = async () => {
                     alt={report.projectName}
                     fill
                     className="object-cover"
+                    sizes="64px"
                     containerClassName="h-16 w-16 rounded-lg overflow-hidden flex-shrink-0"
                   />
                 ) : (

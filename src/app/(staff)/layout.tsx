@@ -3,7 +3,7 @@
  */
 
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/actions/auth";
+import { getCurrentUser } from "@/lib/auth/session";
 import { Header } from "@/components/shared/header";
 import { MobileNav } from "@/components/shared/mobile-nav";
 
