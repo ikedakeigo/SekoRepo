@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // E2E実行時はDev Toolsインジケーターがボトムナビのクリックを妨害するため無効化
+  devIndicators: process.env.E2E === "1" ? false : undefined,
   // Server Actionsのボディサイズ制限を増加（写真アップロード用）
   // 最大10枚 × 10MB = 100MB
   experimental: {

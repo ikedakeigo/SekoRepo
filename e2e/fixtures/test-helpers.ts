@@ -16,8 +16,22 @@ export const ADMIN_USER = {
   name: "テスト管理者",
 };
 
+// ── Next.js dev オーバーレイ非表示 ──
+// dev モードのエラーバッジ（nextjs-portal）が画面左下のナビを覆い
+// クリックを妨害するため、テスト中は常に非表示にする
+async function hideDevOverlay(page: Page) {
+  await page.addInitScript(() => {
+    const style = document.createElement("style");
+    style.textContent = "nextjs-portal { display: none !important; }";
+    document.addEventListener("DOMContentLoaded", () => {
+      document.head.appendChild(style);
+    });
+  });
+}
+
 // ── ログインヘルパー ──
 export async function loginAsStaff(page: Page) {
+  await hideDevOverlay(page);
   await page.goto("/login");
   await page.locator("input#email").fill(STAFF_USER.email);
   await page.locator("input#password").fill(STAFF_USER.password);
@@ -27,6 +41,7 @@ export async function loginAsStaff(page: Page) {
 }
 
 export async function loginAsAdmin(page: Page) {
+  await hideDevOverlay(page);
   await page.goto("/login");
   await page.locator("input#email").fill(ADMIN_USER.email);
   await page.locator("input#password").fill(ADMIN_USER.password);

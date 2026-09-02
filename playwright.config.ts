@@ -1,5 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// 別プロジェクトが 3000 番を使用中でも E2E_PORT で回避できるようにする
+const PORT = process.env.E2E_PORT ?? "3000";
+const BASE_URL = `http://localhost:${PORT}`;
+
 export default defineConfig({
   // テストファイルをe2eディレクトリに配置
   testDir: "./e2e",
@@ -17,7 +21,7 @@ export default defineConfig({
   : [["html", { open: "on-failure" }]],       // ローカルは失敗時に自動オープン
   // テストの実行前にブラウザを起動するための設定
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: BASE_URL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "on-first-retry",
@@ -41,8 +45,8 @@ export default defineConfig({
 ],
   // 開発サーバーの設定
   webServer: {
-    command: "pnpm dev",
-    url: "http://localhost:3000",
+    command: `E2E=1 pnpm dev --port ${PORT}`,
+    url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000, // ← 追加推奨（120秒）
   },

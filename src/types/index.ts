@@ -171,6 +171,54 @@ export interface ReportDetail {
 }
 
 // ============================================
+// カレンダー関連
+// ============================================
+
+/** 予定ラベル */
+export interface EventLabel {
+  id: string;
+  name: string;
+  color: string;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+/** カレンダー予定 */
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description?: string | null;
+  location?: string | null;
+  isAllDay: boolean;
+  startAt: Date;
+  endAt: Date;
+  labelId: string;
+  projectId?: string | null;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** カレンダー予定（関連情報付き） */
+export interface CalendarEventWithRelations extends CalendarEvent {
+  label: EventLabel;
+  project?: Pick<Project, "id" | "name"> | null;
+  creator: Pick<User, "id" | "name">;
+}
+
+/** 予定作成・更新の入力データ */
+export interface EventInput {
+  title: string;
+  labelId: string;
+  isAllDay: boolean;
+  startAt: Date;
+  endAt: Date;
+  projectId?: string | null;
+  location?: string;
+  description?: string;
+}
+
+// ============================================
 // アップロード状態管理
 // ============================================
 
