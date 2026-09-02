@@ -5,7 +5,6 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { LazyImage } from "@/components/shared";
-import { getOptimizedImageUrl } from "@/lib/supabase/image-utils";
 import { Badge } from "@/components/ui/badge";
 import { PHOTO_TYPE_LABELS } from "@/types";
 import type { PhotoType } from "@/types";
@@ -45,7 +44,7 @@ export const PhotoViewCard = ({
 
         {/* 写真 */}
         <LazyImage
-          src={getOptimizedImageUrl(photoUrl, "medium")}
+          src={photoUrl}
           alt={title}
           fill
           className="object-cover"
