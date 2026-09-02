@@ -2,7 +2,7 @@
  * 設定画面（スタッフ・管理者共用）
  */
 
-import { getCurrentUser } from "@/actions/auth";
+import { getCurrentUser } from "@/lib/auth/session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";

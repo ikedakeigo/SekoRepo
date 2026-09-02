@@ -2,7 +2,7 @@
  * 共有カレンダー画面（スタッフ・管理者共通）
  */
 
-import { getCurrentUser } from "@/actions/auth";
+import { getCurrentUser } from "@/lib/auth/session";
 import { CalendarScreen } from "@/components/calendar";
 
 const CalendarPage = async ({

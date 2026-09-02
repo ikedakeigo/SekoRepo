@@ -5,7 +5,7 @@
  */
 
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/actions/auth";
+import { getCurrentUser } from "@/lib/auth/session";
 
 const OnboardingLayout = async ({
   children,

@@ -5,7 +5,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireAuth, requireAdmin } from "./auth";
+import { requireAuth, requireAdmin } from "@/lib/auth/session";
 import { deletePhoto } from "@/lib/supabase/storage";
 import { revalidatePath } from "next/cache";
 import type { ProjectStatus } from "@/types";
